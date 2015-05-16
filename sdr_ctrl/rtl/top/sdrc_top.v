@@ -155,8 +155,8 @@ wire  [SDR_DW-1:0]    sdr_dout            ; // SDRAM Data Output
 wire  [SDR_BW-1:0]    sdr_den_n           ; // SDRAM Data Output enable
 
 
-assign   sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}}; 
-assign   pad_sdr_din = sdr_dq;
+assign   sdram_bus.sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}}; 
+assign   pad_sdr_din = sdram_bus.sdr_dq;
 
 // sdram pad clock is routed back through pad
 // SDRAM Clock from Pad, used for registering Read Data
