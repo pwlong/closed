@@ -126,7 +126,6 @@ reg   [2:0]     wb_cti_i           ;
 
 // instantiate an interface 
 // PWL need to hook this up to signals, no?
-sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, RESETN);
 
 wire [SDR_DW-1:0]     Dq                 ; // SDRAM Read/Write Data Bus
 wire [SDR_BW-1:0]     sdr_dqm            ; // SDRAM DATA Mask
@@ -137,6 +136,7 @@ wire                  sdr_init_done      ; // SDRAM Init Done
 // to fix the sdram interface timing issue
 wire #(2.0) sdram_clk_d   = sdram_clk;
 
+sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN);
 
 sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
 

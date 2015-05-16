@@ -3,6 +3,7 @@ interface sdr_bus #(
   parameter  SDR_BW   = 2           // SDRAM Byte Width
   )(
   input logic sdram_clk,                 // SDRAM Clock
+  input logic sdram_clk_d,               // Delayed clock
   input logic sdram_resetn
 );
   logic               sdr_cke;      // SDRAM Clock
@@ -42,7 +43,7 @@ interface sdr_bus #(
     input sdr_cas_n,
     input sdr_we_n,
     input sdr_dqm,
-    input sdram_clk,
+    input sdram_clk_d,
     input sdram_resetn
   );
 

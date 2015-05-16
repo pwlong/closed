@@ -158,7 +158,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
     wire sdrRas_n, sdrWe_n, sdrAddr, sdrBa, sdrdqm;
     wire [data_bits-1:0] sdrDq;
     assign sdrDq     = sdram_bus.sdr_dq;
-    assign sdrClk    = sdram_bus.sdram_clk;
+    assign sdrClk    = sdram_bus.sdram_clk_d;
     assign sdrCke    = sdram_bus.sdr_cke;
     assign sdrCs_n   = sdram_bus.sdr_cs_n;
     assign sdrCas_n  = sdram_bus.sdr_cas_n;
@@ -200,11 +200,11 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 
     // System clock generator
     always begin
-        @ (posedge sdram_bus.sdram_clk /*Clk*/) begin
+        @ (posedge sdram_bus.sdram_clk_d /*Clk*/) begin
             Sys_clk = CkeZ;
             CkeZ = sdram_bus.sdr_cke;
         end
-        @ (negedge sdram_bus.sdram_clk /*Clk*/) begin
+        @ (negedge sdram_bus.sdram_clk_d /*Clk*/) begin
             Sys_clk = 1'b0;
         end
     end
