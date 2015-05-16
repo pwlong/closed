@@ -10,7 +10,7 @@ interface sdr_bus #(
   logic 	          sdr_ras_n;    // SDRAM ras
   logic 	          sdr_cas_n;    // SDRAM cas
   logic 	          sdr_we_n;     // SDRAM write enable
-  logic [SDR_DW-1:0]  sdr_dq;       // SDRAM DATA                               
+  wire [SDR_DW-1:0]  sdr_dq;       // SDRAM DATA                               
   logic [SDR_BW-1:0]  sdr_dqm;      // SDRAM Data Mask
   logic [1:0]         sdr_ba;       // SDRAM Bank Enable
   logic [12:0] 		  sdr_addr;     // SDRAM Address

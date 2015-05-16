@@ -57,7 +57,7 @@ later version.
  from http://www.opencores.org/lgpl.shtml                     
                                                               
 *******************************************************************/
-
+`timescale 1ns/1ps
 
 `include "sdrc_define.v"
 module sdrc_top 

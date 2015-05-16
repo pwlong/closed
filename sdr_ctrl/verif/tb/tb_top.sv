@@ -126,7 +126,7 @@ reg   [2:0]     wb_cti_i           ;
 
 // instantiate an interface 
 // PWL need to hook this up to signals, no?
-sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk);
+sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, RESETN);
 
 wire [SDR_DW-1:0]     Dq                 ; // SDRAM Read/Write Data Bus
 wire [SDR_BW-1:0]     sdr_dqm            ; // SDRAM DATA Mask
