@@ -70,6 +70,26 @@ parameter      dw              = 32;  // data width
 parameter      tw              = 8;   // tag id width
 parameter      bl              = 5;   // burst_lenght_width 
 
+//
+//  PWL added parameters to change the way the SDRAMs
+//      are instantiated and wired up
+//
+`ifdef SDR_32BIT
+  localparam    SDR_DW          = 32;           // SDRAM Data Width
+  localparam    CFG_SDR_WIDTH   = 2'b00;
+`elsif SDR_16BIT 
+  localparam    SDR_DW          = 16;           // SDRAM Data Width
+  localparam    CFG_SDR_WIDTH   = 2'b01;
+`else  // 8 BIT SDRAM
+  localparam    SDR_DW          = 08;           // SDRAM Data Width
+  localparam    CFG_SDR_WIDTH   = 2'b10;
+`endif
+  localparam    SDR_BW          = (SDR_DW / 8); // SDRAM Byte Width
+  localparam    CFG_COLBITS     = 2'b00;        // 8 Bit Column Address
+
+
+
+                                  
 //-------------------------------------------
 // WISH BONE Interface
 //-------------------------------------------
@@ -91,7 +111,7 @@ reg   [2:0]     wb_cti_i           ;
 //--------------------------------------------
 // SDRAM I/F 
 //--------------------------------------------
-
+/*  kill this noise PWL
 `ifdef SDR_32BIT
    wire [31:0]           Dq                 ; // SDRAM Read/Write Data Bus
    wire [3:0]            sdr_dqm            ; // SDRAM DATA Mask
@@ -102,7 +122,14 @@ reg   [2:0]     wb_cti_i           ;
    wire [7:0]           Dq                 ; // SDRAM Read/Write Data Bus
    wire [0:0]           sdr_dqm            ; // SDRAM DATA Mask
 `endif
+*/
 
+// instantiate an interface 
+// PWL need to hook this up to signals, no?
+sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk);
+
+wire [SDR_DW-1:0]     Dq                 ; // SDRAM Read/Write Data Bus
+wire [SDR_BW-1:0]     sdr_dqm            ; // SDRAM DATA Mask
 wire [1:0]            sdr_ba             ; // SDRAM Bank Select
 wire [12:0]           sdr_addr           ; // SDRAM ADRESS
 wire                  sdr_init_done      ; // SDRAM Init Done 
@@ -110,23 +137,13 @@ wire                  sdr_init_done      ; // SDRAM Init Done
 // to fix the sdram interface timing issue
 wire #(2.0) sdram_clk_d   = sdram_clk;
 
-`ifdef SDR_32BIT
 
-   sdrc_top #(.SDR_DW(32),.SDR_BW(4)) u_dut(
-`elsif SDR_16BIT 
-   sdrc_top #(.SDR_DW(16),.SDR_BW(2)) u_dut(
-`else  // 8 BIT SDRAM
-   sdrc_top #(.SDR_DW(8),.SDR_BW(1)) u_dut(
-`endif
-      // System 
-`ifdef SDR_32BIT
-          .cfg_sdr_width      (2'b00              ), // 32 BIT SDRAM
-`elsif SDR_16BIT
-          .cfg_sdr_width      (2'b01              ), // 16 BIT SDRAM
-`else 
-          .cfg_sdr_width      (2'b10              ), // 8 BIT SDRAM
-`endif
-          .cfg_colbits        (2'b00              ), // 8 Bit Column Address
+sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
+
+/* SYSTEM */
+          .cfg_sdr_width      (CFG_SDR_WIDTH      ), 
+          .cfg_colbits        (CFG_COLBITS        ),
+          .sdram_resetn       (RESETN             ),
 
 /* WISH BONE */
           .wb_rst_i           (!RESETN            ),
@@ -143,6 +160,8 @@ wire #(2.0) sdram_clk_d   = sdram_clk;
           .wb_cti_i           (wb_cti_i           ), 
 
 /* Interface to SDRAMs */
+          .ram_bus            (ram_bus            ),           
+/* commenting out so we can use interfaces PWL
           .sdram_clk          (sdram_clk          ),
           .sdram_resetn       (RESETN             ),
           .sdr_cs_n           (sdr_cs_n           ),
@@ -154,10 +173,11 @@ wire #(2.0) sdram_clk_d   = sdram_clk;
           .sdr_ba             (sdr_ba             ),
           .sdr_addr           (sdr_addr           ), 
           .sdr_dq             (Dq                 ),
+*/ 
 
     /* Parameters */
           .sdr_init_done      (sdr_init_done      ),
-          .cfg_req_depth      (2'h3               ),	        //how many req. buffer should hold
+          .cfg_req_depth      (2'h3               ),  //how many req. buffer should hold
           .cfg_sdr_en         (1'b1               ),
           .cfg_sdr_mode_reg   (13'h033            ),
           .cfg_sdr_tras_d     (4'h4               ),
@@ -204,7 +224,8 @@ mt48lc2m32b2 #(.data_bits(32)) u_sdram32 (
 
 
 mt48lc8m8a2 #(.data_bits(8)) u_sdram8 (
-          .Dq                 (Dq                 ) , 
+          .sdram_bus          (sdram_bus)
+/*        .Dq                 (Dq                 ) , 
           .Addr               (sdr_addr[11:0]     ), 
           .Ba                 (sdr_ba             ), 
           .Clk                (sdram_clk_d        ), 
@@ -214,6 +235,7 @@ mt48lc8m8a2 #(.data_bits(8)) u_sdram8 (
           .Cas_n              (sdr_cas_n          ), 
           .We_n               (sdr_we_n           ), 
           .Dqm                (sdr_dqm            )
+*/          
      );
 `endif
 

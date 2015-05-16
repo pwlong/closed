@@ -16,8 +16,8 @@
     sdrc_core   
         SDRAM Controller file
     wb2sdrc    
-        This module transalate the bus protocl from wishbone to custome
-	sdram controller
+        This module translate the bus protocol from wishbone to customers
+        dram controller
                                                               
   To Do:                                                      
     nothing                                                   
@@ -30,7 +30,7 @@
 	     0.2 - 31st Jan 2012
 	         sdram_dq and sdram_pad_clk are internally generated
 	     0.3 - 26th April 2013
-                  Sdram Address witdh is increased from 12 to 13bits
+                  Sdram Address width is increased from 12 to 13bits
 
                                                              
  Copyright (C) 2000 Authors and OPENCORES.ORG                
@@ -61,119 +61,77 @@ later version.
 
 `include "sdrc_define.v"
 module sdrc_top 
-           (
-                    cfg_sdr_width       ,
-                    cfg_colbits         ,
-                    
-                // WB bus
-                    wb_rst_i            ,
-                    wb_clk_i            ,
-                    
-                    wb_stb_i            ,
-                    wb_ack_o            ,
-                    wb_addr_i           ,
-                    wb_we_i             ,
-                    wb_dat_i            ,
-                    wb_sel_i            ,
-                    wb_dat_o            ,
-                    wb_cyc_i            ,
-                    wb_cti_i            , 
-
-		
-		/* Interface to SDRAMs */
-                    sdram_clk           ,
-                    sdram_resetn        ,
-                    sdr_cs_n            ,
-                    sdr_cke             ,
-                    sdr_ras_n           ,
-                    sdr_cas_n           ,
-                    sdr_we_n            ,
-                    sdr_dqm             ,
-                    sdr_ba              ,
-                    sdr_addr            , 
-                    sdr_dq              ,
-                    
-		/* Parameters */
-                    sdr_init_done       ,
-                    cfg_req_depth       ,	        //how many req. buffer should hold
-                    cfg_sdr_en          ,
-                    cfg_sdr_mode_reg    ,
-                    cfg_sdr_tras_d      ,
-                    cfg_sdr_trp_d       ,
-                    cfg_sdr_trcd_d      ,
-                    cfg_sdr_cas         ,
-                    cfg_sdr_trcar_d     ,
-                    cfg_sdr_twr_d       ,
-                    cfg_sdr_rfsh        ,
-	            cfg_sdr_rfmax
-	    );
+#(
+  parameter APP_AW   = 26,  // Application Address Width
+  parameter APP_DW   = 32,  // Application Data Width 
+  parameter APP_BW   = 4,   // Application Byte Width
+  parameter APP_RW   = 9,   // Application Request Width
+            
+  parameter SDR_DW   = 16,  // SDR Data Width 
+  parameter SDR_BW   = 2,   // SDR Byte Width
+            
+  parameter dw       = 32,  // data width
+  parameter tw       = 8,   // tag id width
+  parameter bl       = 9    // burst_lenght_width 
+)
+( 
+  //-----------------------------------------------
+  // Global Variable
+  // ----------------------------------------------
+  input       sdram_clk          , // SDRAM Clock 
+  input       sdram_resetn       , // Reset Signal
+  input [1:0] cfg_sdr_width      , // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
+  input [1:0] cfg_colbits        , // 2'b00 - 8 Bit column address, 
+                                              // 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
   
-parameter      APP_AW   = 26;  // Application Address Width
-parameter      APP_DW   = 32;  // Application Data Width 
-parameter      APP_BW   = 4;   // Application Byte Width
-parameter      APP_RW   = 9;   // Application Request Width
-
-parameter      SDR_DW   = 16;  // SDR Data Width 
-parameter      SDR_BW   = 2;   // SDR Byte Width
-             
-parameter      dw       = 32;  // data width
-parameter      tw       = 8;   // tag id width
-parameter      bl       = 9;   // burst_lenght_width 
-
-//-----------------------------------------------
-// Global Variable
-// ----------------------------------------------
-input                   sdram_clk          ; // SDRAM Clock 
-input                   sdram_resetn       ; // Reset Signal
-input [1:0]             cfg_sdr_width      ; // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
-input [1:0]             cfg_colbits        ; // 2'b00 - 8 Bit column address, 
-                                             // 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
-
-//--------------------------------------
-// Wish Bone Interface
-// -------------------------------------      
-input                   wb_rst_i           ;
-input                   wb_clk_i           ;
-
-input                   wb_stb_i           ;
-output                  wb_ack_o           ;
-input [APP_AW-1:0]            wb_addr_i          ;
-input                   wb_we_i            ; // 1 - Write, 0 - Read
-input [dw-1:0]          wb_dat_i           ;
-input [dw/8-1:0]        wb_sel_i           ; // Byte enable
-output [dw-1:0]         wb_dat_o           ;
-input                   wb_cyc_i           ;
-input  [2:0]            wb_cti_i           ;
-
-//------------------------------------------------
-// Interface to SDRAMs
-//------------------------------------------------
-output                  sdr_cke             ; // SDRAM CKE
-output 			sdr_cs_n            ; // SDRAM Chip Select
-output                  sdr_ras_n           ; // SDRAM ras
-output                  sdr_cas_n           ; // SDRAM cas
-output			sdr_we_n            ; // SDRAM write enable
-output [SDR_BW-1:0] 	sdr_dqm             ; // SDRAM Data Mask
-output [1:0] 		sdr_ba              ; // SDRAM Bank Enable
-output [12:0] 		sdr_addr            ; // SDRAM Address
-inout [SDR_DW-1:0] 	sdr_dq              ; // SDRA Data Input/output
-
-//------------------------------------------------
-// Configuration Parameter
-//------------------------------------------------
-output                  sdr_init_done       ; // Indicate SDRAM Initialisation Done
-input [3:0] 		cfg_sdr_tras_d      ; // Active to precharge delay
-input [3:0]             cfg_sdr_trp_d       ; // Precharge to active delay
-input [3:0]             cfg_sdr_trcd_d      ; // Active to R/W delay
-input 			cfg_sdr_en          ; // Enable SDRAM controller
-input [1:0] 		cfg_req_depth       ; // Maximum Request accepted by SDRAM controller
-input [12:0] 		cfg_sdr_mode_reg    ;
-input [2:0] 		cfg_sdr_cas         ; // SDRAM CAS Latency
-input [3:0] 		cfg_sdr_trcar_d     ; // Auto-refresh period
-input [3:0]             cfg_sdr_twr_d       ; // Write recovery delay
-input [`SDR_RFSH_TIMER_W-1 : 0] cfg_sdr_rfsh;
-input [`SDR_RFSH_ROW_CNT_W -1 : 0] cfg_sdr_rfmax;
-
+  //--------------------------------------
+  // Wish Bone Interface
+  // -------------------------------------      
+  input                   wb_rst_i           ,
+  input                   wb_clk_i           ,
+  
+  input                   wb_stb_i           ,
+  output                  wb_ack_o           ,
+  input  [APP_AW-1:0]     wb_addr_i          ,
+  input                   wb_we_i            , // 1 - Write, 0 - Read
+  input  [dw-1:0]         wb_dat_i           ,
+  input  [dw/8-1:0]       wb_sel_i           , // Byte enable
+  output [dw-1:0]         wb_dat_o           ,
+  input                   wb_cyc_i           ,
+  input  [2:0]            wb_cti_i           ,
+  
+  //------------------------------------------------
+  // Interface to SDRAMs
+  //------------------------------------------------
+  sdr_bus.ctrl sdram_bus,
+  /* using the interface we designed so we don't need these PWL
+  output                  sdr_cke             , // SDRAM Clock Enable
+  output 			sdr_cs_n            , // SDRAM Chip Select
+  output                  sdr_ras_n           , // SDRAM ras
+  output                  sdr_cas_n           , // SDRAM cas
+  output			sdr_we_n            , // SDRAM write enable
+  output [SDR_BW-1:0] 	sdr_dqm             , // SDRAM Data Mask
+  output [1:0] 		sdr_ba              , // SDRAM Bank Enable
+  output [12:0] 		sdr_addr            , // SDRAM Address
+  inout [SDR_DW-1:0] 	sdr_dq              , // SDRA Data Input/output
+  */
+  
+  //------------------------------------------------
+  // Configuration Parameter
+  //------------------------------------------------
+  output          sdr_init_done       , // Indicate SDRAM Initialisation Done
+  input   [3:0]   cfg_sdr_tras_d      , // Active to precharge delay
+  input   [3:0]   cfg_sdr_trp_d       , // Precharge to active delay
+  input   [3:0]   cfg_sdr_trcd_d      , // Active to R/W delay
+  input   			  cfg_sdr_en          , // Enable SDRAM controller
+  input   [1:0] 	cfg_req_depth       , // Maximum Request accepted by SDRAM controller
+  input   [12:0] 	cfg_sdr_mode_reg    ,
+  input   [2:0] 	cfg_sdr_cas         , // SDRAM CAS Latency
+  input   [3:0] 	cfg_sdr_trcar_d     , // Auto-refresh period
+  input   [3:0]   cfg_sdr_twr_d       , // Write recovery delay
+  input   [`SDR_RFSH_TIMER_W-1:0]   cfg_sdr_rfsh,
+  input   [`SDR_RFSH_ROW_CNT_W-1:0] cfg_sdr_rfmax
+);
 //--------------------------------------------
 // SDRAM controller Interface 
 //--------------------------------------------
@@ -204,7 +162,7 @@ assign   pad_sdr_din = sdr_dq;
 
 // sdram pad clock is routed back through pad
 // SDRAM Clock from Pad, used for registering Read Data
-wire #(1.0) sdram_pad_clk = sdram_clk;
+wire #(1.0) sdram_pad_clk = sdram_bu.sdram_clk;
 
 /************** Ends Here **************************/
 wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
@@ -269,14 +227,14 @@ sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_sdrc_core (
           .app_req_dma_last   (app_req            ) ,
  
  		/* Interface to SDRAMs */
-          .sdr_cs_n           (sdr_cs_n           ) ,
-          .sdr_cke            (sdr_cke            ) ,
-          .sdr_ras_n          (sdr_ras_n          ) ,
-          .sdr_cas_n          (sdr_cas_n          ) ,
-          .sdr_we_n           (sdr_we_n           ) ,
-          .sdr_dqm            (sdr_dqm            ) ,
-          .sdr_ba             (sdr_ba             ) ,
-          .sdr_addr           (sdr_addr           ) , 
+          .sdr_cs_n           (sdram_bus.sdr_cs_n ) ,
+          .sdr_cke            (sdram_bus.sdr_cke  ) ,
+          .sdr_ras_n          (sdram_bus.sdr_ras_n) ,
+          .sdr_cas_n          (sdram_bus.sdr_cas_n) ,
+          .sdr_we_n           (sdram_bus.sdr_we_n ) ,
+          .sdr_dqm            (sdram_bus.sdr_dqm  ) ,
+          .sdr_ba             (sdram_bus.sdr_ba   ) ,
+          .sdr_addr           (sdram_bus.sdr_addr ) , 
           .pad_sdr_din        (pad_sdr_din        ) ,
           .sdr_dout           (sdr_dout           ) ,
           .sdr_den_n          (sdr_den_n          ) ,

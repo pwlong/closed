@@ -163,20 +163,35 @@ output [APP_DW-1:0] 	app_rd_data         ; // Read Data
 output                  app_rd_valid        ; // Read Valid
 output                  app_last_rd         ; // Last Read Transfer of a given Burst
 		
+    
+    
+    
+    
+    
+    
 //------------------------------------------------
-// Interface to SDRAMs
+// Interface to SDRAMs PWL LOOKIE HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 //------------------------------------------------
-output                  sdr_cke             ; // SDRAM CKE
-output 			sdr_cs_n            ; // SDRAM Chip Select
-output                  sdr_ras_n           ; // SDRAM ras
-output                  sdr_cas_n           ; // SDRAM cas
-output			sdr_we_n            ; // SDRAM write enable
-output [SDR_BW-1:0] 	sdr_dqm             ; // SDRAM Data Mask
-output [1:0] 		sdr_ba              ; // SDRAM Bank Enable
-output [12:0] 		sdr_addr            ; // SDRAM Address
-input [SDR_DW-1:0] 	pad_sdr_din         ; // SDRA Data Input
-output [SDR_DW-1:0] 	sdr_dout            ; // SDRAM Data Output
-output [SDR_BW-1:0] 	sdr_den_n           ; // SDRAM Data Output enable
+output                sdr_cke             ; // SDRAM Clock Enable
+output 			          sdr_cs_n            ; // SDRAM Chip Select
+output                sdr_ras_n           ; // SDRAM ras
+output                sdr_cas_n           ; // SDRAM cas
+output			          sdr_we_n            ; // SDRAM write enable
+output  [SDR_BW-1:0] 	sdr_dqm             ; // SDRAM Data Mask
+output  [1:0] 		    sdr_ba              ; // SDRAM Bank Enable
+output  [12:0] 		    sdr_addr            ; // SDRAM Address
+input   [SDR_DW-1:0] 	pad_sdr_din         ; // SDRA Data Input
+output  [SDR_DW-1:0] 	sdr_dout            ; // SDRAM Data Output
+output  [SDR_BW-1:0] 	sdr_den_n           ; // SDRAM Data Output enable
+
+
+
+
+
+
+
+
+
 
 //------------------------------------------------
 // Configuration Parameter
@@ -261,6 +276,7 @@ end
 always@(posedge clk) begin
    pad_sdr_din2 <= pad_sdr_din1;
 end
+
 
 
    /****************************************************************************/
