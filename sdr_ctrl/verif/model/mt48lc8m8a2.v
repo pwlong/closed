@@ -97,13 +97,13 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
     reg                           CkeZ, Sys_clk;
 
     // Commands Decode
-    wire      Active_enable    = ~sdram_bus.Cs_n & ~sdram_bus.Ras_n &  sdram_bus.Cas_n &  sdram_bus.We_n;
-    wire      Aref_enable      = ~sdram_bus.Cs_n & ~sdram_bus.Ras_n & ~sdram_bus.Cas_n &  sdram_bus.We_n;
-    wire      Burst_term       = ~sdram_bus.Cs_n &  sdram_bus.Ras_n &  sdram_bus.Cas_n & ~sdram_bus.We_n;
-    wire      Mode_reg_enable  = ~sdram_bus.Cs_n & ~sdram_bus.Ras_n & ~sdram_bus.Cas_n & ~sdram_bus.We_n;
-    wire      Prech_enable     = ~sdram_bus.Cs_n & ~sdram_bus.Ras_n &  sdram_bus.Cas_n & ~sdram_bus.We_n;
-    wire      Read_enable      = ~sdram_bus.Cs_n &  sdram_bus.Ras_n & ~sdram_bus.Cas_n &  sdram_bus.We_n;
-    wire      Write_enable     = ~sdram_bus.Cs_n &  sdram_bus.Ras_n & ~sdram_bus.Cas_n & ~sdram_bus.We_n;
+    wire      Active_enable    = ~sdram_bus.sdr_cs_n & ~sdram_bus.sdr_ras_n &  sdram_bus.sdr_cas_n &  sdram_bus.sdr_we_n;
+    wire      Aref_enable      = ~sdram_bus.sdr_cs_n & ~sdram_bus.sdr_ras_n & ~sdram_bus.sdr_cas_n &  sdram_bus.sdr_we_n;
+    wire      Burst_term       = ~sdram_bus.sdr_cs_n &  sdram_bus.sdr_ras_n &  sdram_bus.sdr_cas_n & ~sdram_bus.sdr_we_n;
+    wire      Mode_reg_enable  = ~sdram_bus.sdr_cs_n & ~sdram_bus.sdr_ras_n & ~sdram_bus.sdr_cas_n & ~sdram_bus.sdr_we_n;
+    wire      Prech_enable     = ~sdram_bus.sdr_cs_n & ~sdram_bus.sdr_ras_n &  sdram_bus.sdr_cas_n & ~sdram_bus.sdr_we_n;
+    wire      Read_enable      = ~sdram_bus.sdr_cs_n &  sdram_bus.sdr_ras_n & ~sdram_bus.sdr_cas_n &  sdram_bus.sdr_we_n;
+    wire      Write_enable     = ~sdram_bus.sdr_cs_n &  sdram_bus.sdr_ras_n & ~sdram_bus.sdr_cas_n & ~sdram_bus.sdr_we_n;
 
     // Burst Length Decode
     wire      Burst_length_1   = ~Mode_reg[2] & ~Mode_reg[1] & ~Mode_reg[0];
@@ -125,7 +125,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 
     wire      Dq_chk           = Sys_clk & Data_in_enable;      // Check setup/hold time for DQ
 
-    assign    sdram_bus.Dq               = Dq_reg;                        // DQ buffer
+    assign    sdram_bus.sdr_dq               = Dq_reg;                        // DQ buffer
 
     // Commands Operation
     `define   ACT       0
@@ -151,6 +151,22 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
     parameter tRRD =  15.0;
     parameter tWRa =   7.5;     // A2 Version - Auto precharge mode only (1 Clk + 7.5 ns)
     parameter tWRp =  15.0;     // A2 Version - Precharge mode only (15 ns)
+
+    // Used to get around issue with interface dot notation
+    // not working inside timing specify block
+    wire sdrClk, sdrCke, sdrCs_n, sdrCas_n;
+    wire sdrRas_n, sdrWe_n, sdrAddr, sdrBa, sdrdqm;
+    wire [data_bits-1:0] sdrDq;
+    assign sdrDq     = sdram_bus.sdr_dq;
+    assign sdrClk    = sdram_bus.sdram_clk;
+    assign sdrCke    = sdram_bus.sdr_cke;
+    assign sdrCs_n   = sdram_bus.sdr_cs_n;
+    assign sdrCas_n  = sdram_bus.sdr_cas_n;
+    assign sdrRas_n  = sdram_bus.sdr_ras_n;
+    assign sdrWe_n   = sdram_bus.sdr_we_n;
+    assign sdrAddr   = sdram_bus.sdr_addr;
+    assign sdrBa     = sdram_bus.sdr_ba;
+    assign sdrdqm    = sdram_bus.sdr_dqm;
 
     // Timing Check variable
     integer   MRD_chk;
@@ -186,7 +202,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
     always begin
         @ (posedge sdram_bus.sdram_clk /*Clk*/) begin
             Sys_clk = CkeZ;
-            CkeZ = sdram_bus.Cke;
+            CkeZ = sdram_bus.sdr_cke;
         end
         @ (negedge sdram_bus.sdram_clk /*Clk*/) begin
             Sys_clk = 1'b0;
@@ -222,7 +238,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 
         // Dqm pipeline for Read
         Dqm_reg0 = Dqm_reg1;
-        Dqm_reg1 = sdram_bus.dqm /*Dqm*/;
+        Dqm_reg1 = sdram_bus.sdr_dqm /*Dqm*/;
 
         // Read or Write with Auto Precharge Counter
         if (Auto_precharge[0] == 1'b1) begin
@@ -273,40 +289,40 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
         if (Mode_reg_enable == 1'b1) begin
             // Decode CAS Latency, Burst Length, Burst Type, and Write Burst Mode
             if (Pc_b0 == 1'b1 && Pc_b1 == 1'b1 && Pc_b2 == 1'b1 && Pc_b3 == 1'b1) begin
-                Mode_reg = sdram_bus.Addr;
+                Mode_reg = sdram_bus.sdr_addr;
                 if (Debug) begin
                     $display ("at time %t LMR  : Load Mode Register", $time);
                     // CAS Latency
-                    if (sdram_bus.Addr[6 : 4] == 3'b010)
+                    if (sdram_bus.sdr_addr[6 : 4] == 3'b010)
                         $display ("                            CAS Latency      = 2");
-                    else if (sdram_bus.Addr[6 : 4] == 3'b011)
+                    else if (sdram_bus.sdr_addr[6 : 4] == 3'b011)
                         $display ("                            CAS Latency      = 3");
                     else
                         $display ("                            CAS Latency      = Reserved");
                     // Burst Length
-                    if (sdram_bus.Addr[2 : 0] == 3'b000)
+                    if (sdram_bus.sdr_addr[2 : 0] == 3'b000)
                         $display ("                            Burst Length     = 1");
-                    else if (sdram_bus.Addr[2 : 0] == 3'b001)
+                    else if (sdram_bus.sdr_addr[2 : 0] == 3'b001)
                         $display ("                            Burst Length     = 2");
-                    else if (sdram_bus.Addr[2 : 0] == 3'b010)
+                    else if (sdram_bus.sdr_addr[2 : 0] == 3'b010)
                         $display ("                            Burst Length     = 4");
-                    else if (sdram_bus.Addr[2 : 0] == 3'b011)
+                    else if (sdram_bus.sdr_addr[2 : 0] == 3'b011)
                         $display ("                            Burst Length     = 8");
-                    else if (sdram_bus.Addr[3 : 0] == 4'b0111)
+                    else if (sdram_bus.sdr_addr[3 : 0] == 4'b0111)
                         $display ("                            Burst Length     = Full");
                     else
                         $display ("                            Burst Length     = Reserved");
                     // Burst Type
-                    if (sdram_bus.Addr[3] == 1'b0)
+                    if (sdram_bus.sdr_addr[3] == 1'b0)
                         $display ("                            Burst Type       = Sequential");
-                    else if (sdram_bus.Addr[3] == 1'b1)
+                    else if (sdram_bus.sdr_addr[3] == 1'b1)
                         $display ("                            Burst Type       = Interleaved");
                     else
                         $display ("                            Burst Type       = Reserved");
                     // Write Burst Mode
-                    if (sdram_bus.Addr[9] == 1'b0)
+                    if (sdram_bus.sdr_addr[9] == 1'b0)
                         $display ("                            Write Burst Mode = Programmed Burst Length");
-                    else if (sdram_bus.Addr[9] == 1'b1)
+                    else if (sdram_bus.sdr_addr[9] == 1'b1)
                         $display ("                            Write Burst Mode = Single Location Access");
                     else
                         $display ("                            Write Burst Mode = Reserved");
@@ -333,97 +349,97 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
         
         // Active Block (Latch Bank Address and Row Address)
         if (Active_enable == 1'b1) begin
-            if (sdram_bus.Ba == 2'b00 && Pc_b0 == 1'b1) begin
+            if (sdram_bus.sdr_ba == 2'b00 && Pc_b0 == 1'b1) begin
                 {Act_b0, Pc_b0} = 2'b10;
-                B0_row_addr = sdram_bus.Addr [addr_bits - 1 : 0];
+                B0_row_addr = sdram_bus.sdr_addr [addr_bits - 1 : 0];
                 RCD_chk0 = $time;
                 RAS_chk0 = $time;
-                if (Debug) $display ("at time %t ACT  : Bank = 0 Row = %d", $time, sdram_bus.Addr);
+                if (Debug) $display ("at time %t ACT  : Bank = 0 Row = %d", $time, sdram_bus.sdr_addr);
                 // Precharge to Activate Bank 0
                 if ($time - RP_chk0 < tRP) begin
 
 		   //->tb.test_control.error_detected;
                    $display ("at time %t ERROR: tRP violation during Activate bank 0", $time);
                 end
-            end else if (sdram_bus.Ba == 2'b01 && Pc_b1 == 1'b1) begin
+            end else if (sdram_bus.sdr_ba == 2'b01 && Pc_b1 == 1'b1) begin
                 {Act_b1, Pc_b1} = 2'b10;
-                B1_row_addr = sdram_bus.Addr [addr_bits - 1 : 0];
+                B1_row_addr = sdram_bus.sdr_addr [addr_bits - 1 : 0];
                 RCD_chk1 = $time;
                 RAS_chk1 = $time;
-                if (Debug) $display ("at time %t ACT  : Bank = 1 Row = %d", $time, sdram_bus.Addr);
+                if (Debug) $display ("at time %t ACT  : Bank = 1 Row = %d", $time, sdram_bus.sdr_addr);
                 // Precharge to Activate Bank 1
                 if ($time - RP_chk1 < tRP) begin
 
 		   //->tb.test_control.error_detected;
                     $display ("at time %t ERROR: tRP violation during Activate bank 1", $time);
                 end
-            end else if (sdram_bus.Ba == 2'b10 && Pc_b2 == 1'b1) begin
+            end else if (sdram_bus.sdr_ba == 2'b10 && Pc_b2 == 1'b1) begin
                 {Act_b2, Pc_b2} = 2'b10;
-                B2_row_addr = sdram_bus.Addr [addr_bits - 1 : 0];
+                B2_row_addr = sdram_bus.sdr_addr [addr_bits - 1 : 0];
                 RCD_chk2 = $time;
                 RAS_chk2 = $time;
-                if (Debug) $display ("at time %t ACT  : Bank = 2 Row = %d", $time, sdram_bus.Addr);
+                if (Debug) $display ("at time %t ACT  : Bank = 2 Row = %d", $time, sdram_bus.sdr_addr);
                 // Precharge to Activate Bank 2
                 if ($time - RP_chk2 < tRP) begin
 
 		   //->tb.test_control.error_detected;
                     $display ("at time %t ERROR: tRP violation during Activate bank 2", $time);
                 end
-            end else if (sdram_bus.Ba == 2'b11 && Pc_b3 == 1'b1) begin
+            end else if (sdram_bus.sdr_ba == 2'b11 && Pc_b3 == 1'b1) begin
                 {Act_b3, Pc_b3} = 2'b10;
-                B3_row_addr = sdram_bus.Addr [addr_bits - 1 : 0];
+                B3_row_addr = sdram_bus.sdr_addr [addr_bits - 1 : 0];
                 RCD_chk3 = $time;
                 RAS_chk3 = $time;
-                if (Debug) $display ("at time %t ACT  : Bank = 3 Row = %d", $time, sdram_bus.Addr);
+                if (Debug) $display ("at time %t ACT  : Bank = 3 Row = %d", $time, sdram_bus.sdr_addr);
                 // Precharge to Activate Bank 3
                 if ($time - RP_chk3 < tRP) begin
 
 		   //->tb.test_control.error_detected;
                     $display ("at time %t ERROR: tRP violation during Activate bank 3", $time);
                 end
-            end else if (sdram_bus.Ba == 2'b00 && Pc_b0 == 1'b0) begin
+            end else if (sdram_bus.sdr_ba == 2'b00 && Pc_b0 == 1'b0) begin
 
 	       //->tb.test_control.error_detected;
                 $display ("at time %t ERROR: Bank 0 is not Precharged.", $time);
-            end else if (sdram_bus.Ba == 2'b01 && Pc_b1 == 1'b0) begin
+            end else if (sdram_bus.sdr_ba == 2'b01 && Pc_b1 == 1'b0) begin
 
 	       //->tb.test_control.error_detected;
                 $display ("at time %t ERROR: Bank 1 is not Precharged.", $time);
-            end else if (sdram_bus.Ba == 2'b10 && Pc_b2 == 1'b0) begin
+            end else if (sdram_bus.sdr_ba == 2'b10 && Pc_b2 == 1'b0) begin
 
 	       //->tb.test_control.error_detected;
                 $display ("at time %t ERROR: Bank 2 is not Precharged.", $time);
-            end else if (sdram_bus.Ba == 2'b11 && Pc_b3 == 1'b0) begin
+            end else if (sdram_bus.sdr_ba == 2'b11 && Pc_b3 == 1'b0) begin
 
 	       //->tb.test_control.error_detected;
                 $display ("at time %t ERROR: Bank 3 is not Precharged.", $time);
             end
             // Active Bank A to Active Bank B
-            if ((Previous_bank != sdram_bus.Ba) && ($time - RRD_chk < tRRD)) begin
+            if ((Previous_bank != sdram_bus.sdr_ba) && ($time - RRD_chk < tRRD)) begin
 
 	       //->tb.test_control.error_detected;
-                $display ("at time %t ERROR: tRRD violation during Activate bank = %d", $time, sdram_bus.Ba);
+                $display ("at time %t ERROR: tRRD violation during Activate bank = %d", $time, sdram_bus.sdr_ba);
             end
             // Load Mode Register to Active
             if (MRD_chk < tMRD ) begin
 
 	       //->tb.test_control.error_detected;
-                $display ("at time %t ERROR: tMRD violation during Activate bank = %d", $time, sdram_bus.Ba);
+                $display ("at time %t ERROR: tMRD violation during Activate bank = %d", $time, sdram_bus.sdr_ba);
             end
             // Auto Refresh to Activate
             if ($time - RC_chk < tRC) begin
 
 	       //->tb.test_control.error_detected;
-                $display ("at time %t ERROR: tRC violation during Activate bank = %d", $time, sdram_bus.Ba);
+                $display ("at time %t ERROR: tRC violation during Activate bank = %d", $time, sdram_bus.sdr_ba);
             end
             // Record variables for checking violation
             RRD_chk = $time;
-            Previous_bank = sdram_bus.Ba;
+            Previous_bank = sdram_bus.sdr_ba;
         end
         
         // Precharge Block
         if (Prech_enable == 1'b1) begin
-            if (sdram_bus.Addr[10] == 1'b1) begin
+            if (sdram_bus.sdr_addr[10] == 1'b1) begin
                 {Pc_b0, Pc_b1, Pc_b2, Pc_b3} = 4'b1111;
                 {Act_b0, Act_b1, Act_b2, Act_b3} = 4'b0000;
                 RP_chk0 = $time;
@@ -445,8 +461,8 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 		   //->tb.test_control.error_detected;
                     $display ("at time %t ERROR: tWR violation during Precharge all bank", $time);
                 end
-            end else if (sdram_bus.Addr[10] == 1'b0) begin
-                if (sdram_bus.Ba == 2'b00) begin
+            end else if (sdram_bus.sdr_addr[10] == 1'b0) begin
+                if (sdram_bus.sdr_ba == 2'b00) begin
                     {Pc_b0, Act_b0} = 2'b10;
                     RP_chk0 = $time;
                     if (Debug) $display ("at time %t PRE  : Bank = 0",$time);
@@ -456,7 +472,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 		       //->tb.test_control.error_detected;
                         $display ("at time %t ERROR: tRAS violation during Precharge bank 0", $time);
                     end
-                end else if (sdram_bus.Ba == 2'b01) begin
+                end else if (sdram_bus.sdr_ba == 2'b01) begin
                     {Pc_b1, Act_b1} = 2'b10;
                     RP_chk1 = $time;
                     if (Debug) $display ("at time %t PRE  : Bank = 1",$time);
@@ -466,7 +482,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 		       //->tb.test_control.error_detected;
                         $display ("at time %t ERROR: tRAS violation during Precharge bank 1", $time);
                     end
-                end else if (sdram_bus.Ba == 2'b10) begin
+                end else if (sdram_bus.sdr_ba == 2'b10) begin
                     {Pc_b2, Act_b2} = 2'b10;
                     RP_chk2 = $time;
                     if (Debug) $display ("at time %t PRE  : Bank = 2",$time);
@@ -476,7 +492,7 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 		       //->tb.test_control.error_detected;
                         $display ("at time %t ERROR: tRAS violation during Precharge bank 2", $time);
                     end
-                end else if (sdram_bus.Ba == 2'b11) begin
+                end else if (sdram_bus.sdr_ba == 2'b11) begin
                     {Pc_b3, Act_b3} = 2'b10;
                     RP_chk3 = $time;
                     if (Debug) $display ("at time %t PRE  : Bank = 3",$time);
@@ -488,25 +504,25 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
                     end
                 end
                 // tWR violation check for write
-                if ($time - WR_chk[sdram_bus.Ba] < tWRp) begin
+                if ($time - WR_chk[sdram_bus.sdr_ba] < tWRp) begin
 
 		   //->tb.test_control.error_detected;
-                    $display ("at time %t ERROR: tWR violation during Precharge bank %d", $time, sdram_bus.Ba);
+                    $display ("at time %t ERROR: tWR violation during Precharge bank %d", $time, sdram_bus.sdr_ba);
                 end
             end
             // Terminate a Write Immediately (if same bank or all banks)
-            if (Data_in_enable == 1'b1 && (Bank == sdram_bus.Ba || sdram_bus.Addr[10] == 1'b1)) begin
+            if (Data_in_enable == 1'b1 && (Bank == sdram_bus.sdr_ba || sdram_bus.sdr_addr[10] == 1'b1)) begin
                 Data_in_enable = 1'b0;
             end
             // Precharge Command Pipeline for Read
             if (Cas_latency_3 == 1'b1) begin
                 Command[2] = `SDRAM_PRECH;
-                Bank_precharge[2] = sdram_bus.Ba;
-                A10_precharge[2] = sdram_bus.Addr[10];
+                Bank_precharge[2] = sdram_bus.sdr_ba;
+                A10_precharge[2] = sdram_bus.sdr_addr[10];
             end else if (Cas_latency_2 == 1'b1) begin
                 Command[1] = `SDRAM_PRECH;
-                Bank_precharge[1] = sdram_bus.Ba;
-                A10_precharge[1] = sdram_bus.Addr[10];
+                Bank_precharge[1] = sdram_bus.sdr_ba;
+                A10_precharge[1] = sdram_bus.sdr_addr[10];
             end
         end
         
@@ -528,30 +544,30 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
         // Read, Write, Column Latch
         if (Read_enable == 1'b1 || Write_enable == 1'b1) begin
             // Check to see if bank is open (ACT)
-            if ((sdram_bus.Ba == 2'b00 && Pc_b0 == 1'b1) || (sdram_bus.Ba == 2'b01 && Pc_b1 == 1'b1) ||
-                (sdram_bus.Ba == 2'b10 && Pc_b2 == 1'b1) || (sdram_bus.Ba == 2'b11 && Pc_b3 == 1'b1)) begin
+            if ((sdram_bus.sdr_ba == 2'b00 && Pc_b0 == 1'b1) || (sdram_bus.sdr_ba == 2'b01 && Pc_b1 == 1'b1) ||
+                (sdram_bus.sdr_ba == 2'b10 && Pc_b2 == 1'b1) || (sdram_bus.sdr_ba == 2'b11 && Pc_b3 == 1'b1)) begin
 
 	       //->tb.test_control.error_detected;
-                $display("at time %t ERROR: Cannot Read or Write - Bank %d is not Activated", $time, sdram_bus.Ba);
+                $display("at time %t ERROR: Cannot Read or Write - Bank %d is not Activated", $time, sdram_bus.sdr_ba);
             end
             // Activate to Read or Write
-            if ((sdram_bus.Ba == 2'b00) && ($time - RCD_chk0 < tRCD))
+            if ((sdram_bus.sdr_ba == 2'b00) && ($time - RCD_chk0 < tRCD))
 	      begin
 		 //->tb.test_control.error_detected;
                  $display("at time %t ERROR: tRCD violation during Read or Write to Bank 0", $time);
 	      end
 	   
-            if ((sdram_bus.Ba == 2'b01) && ($time - RCD_chk1 < tRCD))
+            if ((sdram_bus.sdr_ba == 2'b01) && ($time - RCD_chk1 < tRCD))
 	      begin
 		 //->tb.test_control.error_detected;
                  $display("at time %t ERROR: tRCD violation during Read or Write to Bank 1", $time);
 	      end
-            if ((sdram_bus.Ba == 2'b10) && ($time - RCD_chk2 < tRCD))
+            if ((sdram_bus.sdr_ba == 2'b10) && ($time - RCD_chk2 < tRCD))
 	      begin
 		 //->tb.test_control.error_detected;
                  $display("at time %t ERROR: tRCD violation during Read or Write to Bank 2", $time);
 	      end
-            if ((sdram_bus.Ba == 2'b11) && ($time - RCD_chk3 < tRCD))
+            if ((sdram_bus.sdr_ba == 2'b11) && ($time - RCD_chk3 < tRCD))
 	      begin
 		 //->tb.test_control.error_detected;
                  $display("at time %t ERROR: tRCD violation during Read or Write to Bank 3", $time);
@@ -560,21 +576,21 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
             if (Read_enable == 1'b1) begin
                 // CAS Latency pipeline
                 if (Cas_latency_3 == 1'b1) begin
-                    if (sdram_bus.Addr[10] == 1'b1) begin
+                    if (sdram_bus.sdr_addr[10] == 1'b1) begin
                         Command[2] = `READ_A;
                     end else begin
                         Command[2] = `READ;
                     end
-                    Col_addr[2] = sdram_bus.Addr;
-                    Bank_addr[2] = sdram_bus.Ba;
+                    Col_addr[2] = sdram_bus.sdr_addr;
+                    Bank_addr[2] = sdram_bus.sdr_ba;
                 end else if (Cas_latency_2 == 1'b1) begin
-                    if (sdram_bus.Addr[10] == 1'b1) begin
+                    if (sdram_bus.sdr_addr[10] == 1'b1) begin
                         Command[1] = `READ_A;
                     end else begin
                         Command[1] = `READ;
                     end
-                    Col_addr[1] = sdram_bus.Addr;
-                    Bank_addr[1] = sdram_bus.Ba;
+                    Col_addr[1] = sdram_bus.sdr_addr;
+                    Bank_addr[1] = sdram_bus.sdr_ba;
                 end
 
                 // Read interrupt Write (terminate Write immediately)
@@ -584,13 +600,13 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
 
             // Write Command
             end else if (Write_enable == 1'b1) begin
-                if (sdram_bus.Addr[10] == 1'b1) begin
+                if (sdram_bus.sdr_addr[10] == 1'b1) begin
                     Command[0] = `WRITE_A;
                 end else begin
                     Command[0] = `SDRAM_WRITE;
                 end
-                Col_addr[0] = sdram_bus.Addr;
-                Bank_addr[0] = sdram_bus.Ba;
+                Col_addr[0] = sdram_bus.sdr_addr;
+                Bank_addr[0] = sdram_bus.sdr_ba;
 
                 // Write interrupt Write (terminate Write immediately)
                 if (Data_in_enable == 1'b1) begin
@@ -606,23 +622,23 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
             // Interrupting a Write with Autoprecharge
             if (Auto_precharge[Bank] == 1'b1 && Write_precharge[Bank] == 1'b1) begin
                 RW_interrupt_write[Bank] = 1'b1;
-                if (Debug) $display ("at time %t NOTE : Read/Write Bank %d interrupt Write Bank %d with Autoprecharge", $time, sdram_bus.Ba, Bank);
+                if (Debug) $display ("at time %t NOTE : Read/Write Bank %d interrupt Write Bank %d with Autoprecharge", $time, sdram_bus.sdr_ba, Bank);
             end
 
             // Interrupting a Read with Autoprecharge
             if (Auto_precharge[Bank] == 1'b1 && Read_precharge[Bank] == 1'b1) begin
                 RW_interrupt_read[Bank] = 1'b1;
-                if (Debug) $display ("at time %t NOTE : Read/Write Bank %d interrupt Read Bank %d with Autoprecharge", $time, sdram_bus.Ba, Bank);
+                if (Debug) $display ("at time %t NOTE : Read/Write Bank %d interrupt Read Bank %d with Autoprecharge", $time, sdram_bus.sdr_ba, Bank);
             end
 
             // Read or Write with Auto Precharge
-            if (sdram_bus.Addr[10] == 1'b1) begin
-                Auto_precharge[sdram_bus.Ba] = 1'b1;
-                Count_precharge[sdram_bus.Ba] = 0;
+            if (sdram_bus.sdr_addr[10] == 1'b1) begin
+                Auto_precharge[sdram_bus.sdr_ba] = 1'b1;
+                Count_precharge[sdram_bus.sdr_ba] = 0;
                 if (Read_enable == 1'b1) begin
-                    Read_precharge[sdram_bus.Ba] = 1'b1;
+                    Read_precharge[sdram_bus.sdr_ba] = 1'b1;
                 end else if (Write_enable == 1'b1) begin
-                    Write_precharge[sdram_bus.Ba] = 1'b1;
+                    Write_precharge[sdram_bus.sdr_ba] = 1'b1;
                 end
             end
         end
@@ -757,17 +773,17 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
             if (Bank == 2'b10) Dq_dqm [15 : 0] = Bank2 [{Row, Col}];
             if (Bank == 2'b11) Dq_dqm [15 : 0] = Bank3 [{Row, Col}];
             // Dqm operation
-            if (sdram_bus.dqm /*Dqm*/[0] == 1'b0) Dq_dqm [ 7 : 0] = sdram_bus.Dq [ 7 : 0];
+            if (sdram_bus.sdr_dqm /*Dqm*/[0] == 1'b0) Dq_dqm [ 7 : 0] = sdram_bus.sdr_dq [ 7 : 0];
             // Write to memory
             if (Bank == 2'b00) Bank0 [{Row, Col}] = Dq_dqm [15 : 0];
             if (Bank == 2'b01) Bank1 [{Row, Col}] = Dq_dqm [15 : 0];
             if (Bank == 2'b10) Bank2 [{Row, Col}] = Dq_dqm [15 : 0];
             if (Bank == 2'b11) Bank3 [{Row, Col}] = Dq_dqm [15 : 0];
             // Output result
-            if (sdram_bus.dqm /*Dqm*/ == 1'b1) begin
+            if (sdram_bus.sdr_dqm /*Dqm*/ == 1'b1) begin
                 if (Debug) $display("at time %t WRITE: Bank = %d Row = %d, Col = %d, Data = Hi-Z due to DQM", $time, Bank, Row, Col);
             end else begin
-                if (Debug) $display("at time %t WRITE: Bank = %d Row = %d, Col = %d, Data = %h, Dqm = %b", $time, Bank, Row, Col, Dq_dqm, sdram_bus.dqm /*Dqm*/);
+                if (Debug) $display("at time %t WRITE: Bank = %d Row = %d, Col = %d, Data = %h, Dqm = %b", $time, Bank, Row, Col, Dq_dqm, sdram_bus.sdr_dqm /*Dqm*/);
                 // Record tWR time and reset counter
                 WR_chk [Bank] = $time;
                 WR_counter [Bank] = 0;
@@ -945,19 +961,19 @@ module mt48lc8m8a2 (sdr_bus.ram sdram_bus/*Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, 
                     tCKS =  1.5,                                        // CKE Setup Time
                     tCMH =  0.8,                                        // CS#, RAS#, CAS#, WE#, DQM# Hold  Time
                     tCMS =  1.5;                                        // CS#, RAS#, CAS#, WE#, DQM# Setup Time
-        $width    (posedge sdram_bus.sdram_clk /*Clk*/,           tCH);
-        $width    (negedge sdram_bus.sdram_clk /*Clk*/,           tCL);
-        $period   (negedge sdram_bus.sdram_clk /*Clk*/,           tCK);
-        $period   (posedge sdram_bus.sdram_clk /*Clk*/,           tCK);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Cke,   tCKS, tCKH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Cs_n,  tCMS, tCMH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Cas_n, tCMS, tCMH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Ras_n, tCMS, tCMH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.We_n,  tCMS, tCMH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Addr,  tAS,  tAH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.Ba,    tAS,  tAH);
-        $setuphold(posedge sdram_bus.sdram_clk /*Clk*/,    sdram_bus.dqm /*Dqm*/,   tCMS, tCMH);
-        $setuphold(posedge Dq_chk, sdram_bus.Dq,    tDS,  tDH);
+        $width    (posedge sdrClk /*Clk*/,           tCH);
+        $width    (negedge sdrClk /*Clk*/,           tCL);
+        $period   (negedge sdrClk /*Clk*/,           tCK);
+        $period   (posedge sdrClk/*Clk*/,           tCK);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrCke,   tCKS, tCKH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrCs_n,  tCMS, tCMH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrCas_n, tCMS, tCMH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrRas_n, tCMS, tCMH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrWe_n,  tCMS, tCMH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrAddr,  tAS,  tAH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrBa,    tAS,  tAH);
+        $setuphold(posedge sdrClk /*Clk*/,    sdrdqm /*Dqm*/,   tCMS, tCMH);
+        $setuphold(posedge Dq_chk, sdrDq,    tDS,  tDH);
     endspecify
 
 endmodule

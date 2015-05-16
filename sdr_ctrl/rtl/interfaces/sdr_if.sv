@@ -2,17 +2,18 @@ interface sdr_bus #(
   parameter  SDR_DW   = 16,         // SDRAM Data Width 
   parameter  SDR_BW   = 2           // SDRAM Byte Width
   )(
-  input logic sdram_clk                 // SDRAM Clock
+  input logic sdram_clk,                 // SDRAM Clock
+  input logic sdram_resetn
 );
   logic               sdr_cke;      // SDRAM Clock
   logic               sdr_cs_n;     // SDRAM Chip Select
-	logic 	            sdr_ras_n;    // SDRAM ras
-	logic 	            sdr_cas_n;    // SDRAM cas
-	logic 	            sdr_we_n;     // SDRAM write enable
+  logic 	          sdr_ras_n;    // SDRAM ras
+  logic 	          sdr_cas_n;    // SDRAM cas
+  logic 	          sdr_we_n;     // SDRAM write enable
   logic [SDR_DW-1:0]  sdr_dq;       // SDRAM DATA                               
-  logic [SDR_BW-1:0] 	sdr_dqm;      // SDRAM Data Mask
-  logic [1:0] 		    sdr_ba;       // SDRAM Bank Enable
-  logic [12:0] 		    sdr_addr;     // SDRAM Address
+  logic [SDR_BW-1:0]  sdr_dqm;      // SDRAM Data Mask
+  logic [1:0]         sdr_ba;       // SDRAM Bank Enable
+  logic [12:0] 		  sdr_addr;     // SDRAM Address
   //logic [SDR_DW-1:0] 	pad_sdr_din;  // SDRAM Data Input
   //logic [SDR_DW-1:0] 	sdr_dout;     // SDRAM Data Output
   //logic [SDR_BW-1:0] 	sdr_den_n;    // SDRAM Data Output enable
@@ -27,7 +28,8 @@ interface sdr_bus #(
     output sdr_cas_n,
     output sdr_we_n,
     output sdr_dqm,
-    input  sdram_clk
+    input  sdram_clk,
+    input  sdram_resetn
   );
   
   modport ram (
@@ -40,7 +42,8 @@ interface sdr_bus #(
     input sdr_cas_n,
     input sdr_we_n,
     input sdr_dqm,
-    input sdram_clk
+    input sdram_clk,
+    input sdram_resetn
   );
 
 endinterface

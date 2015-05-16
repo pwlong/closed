@@ -143,8 +143,6 @@ sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
 /* SYSTEM */
           .cfg_sdr_width      (CFG_SDR_WIDTH      ), 
           .cfg_colbits        (CFG_COLBITS        ),
-          .sdram_resetn       (RESETN             ),
-
 /* WISH BONE */
           .wb_rst_i           (!RESETN            ),
           .wb_clk_i           (sys_clk            ),
@@ -160,7 +158,7 @@ sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
           .wb_cti_i           (wb_cti_i           ), 
 
 /* Interface to SDRAMs */
-          .ram_bus            (ram_bus            ),           
+          .sdram_bus            (sdram_bus            ),           
 /* commenting out so we can use interfaces PWL
           .sdram_clk          (sdram_clk          ),
           .sdram_resetn       (RESETN             ),

@@ -78,8 +78,6 @@ module sdrc_top
   //-----------------------------------------------
   // Global Variable
   // ----------------------------------------------
-  input       sdram_clk          , // SDRAM Clock 
-  input       sdram_resetn       , // Reset Signal
   input [1:0] cfg_sdr_width      , // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
   input [1:0] cfg_colbits        , // 2'b00 - 8 Bit column address, 
                                               // 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
@@ -162,7 +160,7 @@ assign   pad_sdr_din = sdr_dq;
 
 // sdram pad clock is routed back through pad
 // SDRAM Clock from Pad, used for registering Read Data
-wire #(1.0) sdram_pad_clk = sdram_bu.sdram_clk;
+wire #(1.0) sdram_pad_clk = sdram_bus.sdram_clk;
 
 /************** Ends Here **************************/
 wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
@@ -182,8 +180,8 @@ wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
 
 
       //SDRAM Controller Hand-Shake Signal 
-          .sdram_clk          (sdram_clk          ) ,
-          .sdram_resetn       (sdram_resetn       ) ,
+          .sdram_clk          (sdram_bus.sdram_clk          ) ,
+          .sdram_resetn       (sdram_bus.sdram_resetn       ) ,
           .sdr_req            (app_req            ) ,
           .sdr_req_addr       (app_req_addr       ) ,
           .sdr_req_len        (app_req_len        ) ,
@@ -201,9 +199,9 @@ wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
 
 
 sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_sdrc_core (
-          .clk                (sdram_clk          ) ,
+          .clk                (sdram_bus.sdram_clk          ) ,
           .pad_clk            (sdram_pad_clk      ) ,
-          .reset_n            (sdram_resetn       ) ,
+          .reset_n            (sdram_bus.sdram_resetn       ) ,
           .sdr_width          (cfg_sdr_width      ) ,
           .cfg_colbits        (cfg_colbits        ) ,
 
