@@ -74,16 +74,6 @@ interface sdr_bus #(
   `define BANK_DMA_LAST_PRE 3'b100
   
   // commands in table 14, page 25 of dram datasheet
-  `define CMD_NOP_I              4'b1xxx
-  `define CMD_NOP                4'b0111
-  `define CMD_ACTIVE             4'b0011
-  `define CMD_READ               4'b0101
-  `define CMD_WRITE              4'b0100
-  `define CMD_BURST_TERMINATE    4'b0110
-  `define CMD_PRECHARGE          4'b0010
-  `define CMD_AUTO_REFRESH       4'b0001
-  `define CMD_LOAD_MODE_REGISTER 4'b0000
-
   typedef enum bit [3:0] {
     CMD_LOAD_MODE_REGISTER = 4'b0000,
     CMD_AUTO_REFRESH       = 4'b0001,
