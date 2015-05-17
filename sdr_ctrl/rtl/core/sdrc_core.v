@@ -37,12 +37,12 @@
   Version  : 0.0 - 8th Jan 2012
                 Initial version with 16/32 Bit SDRAM Support
            : 0.1 - 24th Jan 2012
-	         8 Bit SDRAM Support is added
+             8 Bit SDRAM Support is added
              0.2 - 2nd Feb 2012
-	           Improved the command pipe structure to accept up-to 
-		   4 command of different bank.
-	     0.3 - 7th Feb 2012
-	           Bug fix for parameter defination for request length has changed from 9 to 12
+               Improved the command pipe structure to accept up-to 
+           4 command of different bank.
+         0.3 - 7th Feb 2012
+               Bug fix for parameter defination for request length has changed from 9 to 12
              0.4 - 26th April 2013
                    SDRAM Address Bit is Extended by 12 bit to 13 bit to support higher SDRAM
 
@@ -76,56 +76,56 @@ later version.
 `include "sdrc_define.v"
 module sdrc_core 
            (
-		clk,
+        clk,
                 pad_clk,
-		reset_n,
+        reset_n,
                 sdr_width,
-		cfg_colbits,
+        cfg_colbits,
 
-		/* Request from app */
-		app_req,	        // Transfer Request
-		app_req_addr,	        // SDRAM Address
-		app_req_len,	        // Burst Length (in 16 bit words)
-		app_req_wrap,	        // Wrap mode request (xfr_len = 4)
-		app_req_wr_n,	        // 0 => Write request, 1 => read req
-		app_req_ack,	        // Request has been accepted
-		cfg_req_depth,	        //how many req. buffer should hold
-		
-		app_wr_data,
+        /* Request from app */
+        app_req,            // Transfer Request
+        app_req_addr,            // SDRAM Address
+        app_req_len,            // Burst Length (in 16 bit words)
+        app_req_wrap,            // Wrap mode request (xfr_len = 4)
+        app_req_wr_n,            // 0 => Write request, 1 => read req
+        app_req_ack,            // Request has been accepted
+        cfg_req_depth,            //how many req. buffer should hold
+        
+        app_wr_data,
                 app_wr_en_n,
-		app_last_wr,
+        app_last_wr,
 
-		app_rd_data,
-		app_rd_valid,
-		app_last_rd,
-		app_wr_next_req,
-		sdr_init_done,
-		app_req_dma_last,
+        app_rd_data,
+        app_rd_valid,
+        app_last_rd,
+        app_wr_next_req,
+        sdr_init_done,
+        app_req_dma_last,
 
-		/* Interface to SDRAMs */
-		sdr_cs_n,
-		sdr_cke,
-		sdr_ras_n,
-		sdr_cas_n,
-		sdr_we_n,
-		sdr_dqm,
-		sdr_ba,
-		sdr_addr, 
-		pad_sdr_din,
-		sdr_dout,
-		sdr_den_n,
+        /* Interface to SDRAMs */
+        sdr_cs_n,
+        sdr_cke,
+        sdr_ras_n,
+        sdr_cas_n,
+        sdr_we_n,
+        sdr_dqm,
+        sdr_ba,
+        sdr_addr, 
+        pad_sdr_din,
+        sdr_dout,
+        sdr_den_n,
 
-		/* Parameters */
-		cfg_sdr_en,
-		cfg_sdr_mode_reg,
-		cfg_sdr_tras_d,
-		cfg_sdr_trp_d,
-		cfg_sdr_trcd_d,
-		cfg_sdr_cas,
-		cfg_sdr_trcar_d,
-		cfg_sdr_twr_d,
-		cfg_sdr_rfsh,
-		cfg_sdr_rfmax);
+        /* Parameters */
+        cfg_sdr_en,
+        cfg_sdr_mode_reg,
+        cfg_sdr_tras_d,
+        cfg_sdr_trp_d,
+        cfg_sdr_trcd_d,
+        cfg_sdr_cas,
+        cfg_sdr_trcar_d,
+        cfg_sdr_twr_d,
+        cfg_sdr_rfsh,
+        cfg_sdr_rfmax);
   
 parameter  APP_AW   = 26;  // Application Address Width
 parameter  APP_DW   = 32;  // Application Data Width 
@@ -149,20 +149,20 @@ input [1:0]             cfg_colbits         ; // 2'b00 - 8 Bit column address, 2
 //------------------------------------------------
 // Request from app
 //------------------------------------------------
-input 			app_req             ; // Application Request
-input [APP_AW-1:0] 	app_req_addr        ; // Address 
-input 			app_req_wr_n        ; // 0 - Write, 1 - Read
+input             app_req             ; // Application Request
+input [APP_AW-1:0]     app_req_addr        ; // Address 
+input             app_req_wr_n        ; // 0 - Write, 1 - Read
 input                   app_req_wrap        ; // Address Wrap
 output                  app_req_ack         ; // Application Request Ack
-		
-input [APP_DW-1:0] 	app_wr_data         ; // Write Data
-output 		        app_wr_next_req     ; // Next Write Data Request
-input [APP_BW-1:0] 	app_wr_en_n         ; // Byte wise Write Enable
+        
+input [APP_DW-1:0]     app_wr_data         ; // Write Data
+output                 app_wr_next_req     ; // Next Write Data Request
+input [APP_BW-1:0]     app_wr_en_n         ; // Byte wise Write Enable
 output                  app_last_wr         ; // Last Write trannsfer of a given Burst
-output [APP_DW-1:0] 	app_rd_data         ; // Read Data
+output [APP_DW-1:0]     app_rd_data         ; // Read Data
 output                  app_rd_valid        ; // Read Valid
 output                  app_last_rd         ; // Last Read Transfer of a given Burst
-		
+        
     
     
     
@@ -173,16 +173,16 @@ output                  app_last_rd         ; // Last Read Transfer of a given B
 // Interface to SDRAMs PWL LOOKIE HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 //------------------------------------------------
 output                sdr_cke             ; // SDRAM Clock Enable
-output 			          sdr_cs_n            ; // SDRAM Chip Select
+output                       sdr_cs_n            ; // SDRAM Chip Select
 output                sdr_ras_n           ; // SDRAM ras
 output                sdr_cas_n           ; // SDRAM cas
-output			          sdr_we_n            ; // SDRAM write enable
-output  [SDR_BW-1:0] 	sdr_dqm             ; // SDRAM Data Mask
-output  [1:0] 		    sdr_ba              ; // SDRAM Bank Enable
-output  [12:0] 		    sdr_addr            ; // SDRAM Address
-input   [SDR_DW-1:0] 	pad_sdr_din         ; // SDRA Data Input
-output  [SDR_DW-1:0] 	sdr_dout            ; // SDRAM Data Output
-output  [SDR_BW-1:0] 	sdr_den_n           ; // SDRAM Data Output enable
+output                      sdr_we_n            ; // SDRAM write enable
+output  [SDR_BW-1:0]     sdr_dqm             ; // SDRAM Data Mask
+output  [1:0]             sdr_ba              ; // SDRAM Bank Enable
+output  [12:0]             sdr_addr            ; // SDRAM Address
+input   [SDR_DW-1:0]     pad_sdr_din         ; // SDRA Data Input
+output  [SDR_DW-1:0]     sdr_dout            ; // SDRAM Data Output
+output  [SDR_BW-1:0]     sdr_den_n           ; // SDRAM Data Output enable
 
 
 
@@ -197,15 +197,15 @@ output  [SDR_BW-1:0] 	sdr_den_n           ; // SDRAM Data Output enable
 // Configuration Parameter
 //------------------------------------------------
 output                  sdr_init_done       ; // Indicate SDRAM Initialisation Done
-input [3:0] 		cfg_sdr_tras_d      ; // Active to precharge delay
+input [3:0]         cfg_sdr_tras_d      ; // Active to precharge delay
 input [3:0]             cfg_sdr_trp_d       ; // Precharge to active delay
 input [3:0]             cfg_sdr_trcd_d      ; // Active to R/W delay
-input 			cfg_sdr_en          ; // Enable SDRAM controller
-input [1:0] 		cfg_req_depth       ; // Maximum Request accepted by SDRAM controller
-input [APP_RW-1:0]	app_req_len         ; // Application Burst Request length in 32 bit 
-input [12:0] 		cfg_sdr_mode_reg    ;
-input [2:0] 		cfg_sdr_cas         ; // SDRAM CAS Latency
-input [3:0] 		cfg_sdr_trcar_d     ; // Auto-refresh period
+input             cfg_sdr_en          ; // Enable SDRAM controller
+input [1:0]         cfg_req_depth       ; // Maximum Request accepted by SDRAM controller
+input [APP_RW-1:0]    app_req_len         ; // Application Burst Request length in 32 bit 
+input [12:0]         cfg_sdr_mode_reg    ;
+input [2:0]         cfg_sdr_cas         ; // SDRAM CAS Latency
+input [3:0]         cfg_sdr_trcar_d     ; // Auto-refresh period
 input [3:0]             cfg_sdr_twr_d       ; // Write recovery delay
 input [`SDR_RFSH_TIMER_W-1 : 0] cfg_sdr_rfsh;
 input [`SDR_RFSH_ROW_CNT_W -1 : 0] cfg_sdr_rfmax;
@@ -216,32 +216,32 @@ input                   app_req_dma_last;    // this signal should close the ban
    
 // SDR_REQ_GEN
 wire [`SDR_REQ_ID_W-1:0]r2b_req_id;
-wire [1:0] 		r2b_ba;
-wire [12:0] 		r2b_raddr;
-wire [12:0] 		r2b_caddr;
-wire [`REQ_BW-1:0] 	r2b_len;
+wire [1:0]         r2b_ba;
+wire [12:0]         r2b_raddr;
+wire [12:0]         r2b_caddr;
+wire [`REQ_BW-1:0]     r2b_len;
 
 // SDR BANK CTL
 wire [`SDR_REQ_ID_W-1:0]b2x_id;
-wire [1:0] 		b2x_ba;
-wire [12:0] 		b2x_addr;
-wire [`REQ_BW-1:0] 	b2x_len;
-wire [1:0] 		b2x_cmd;
+wire [1:0]         b2x_ba;
+wire [12:0]         b2x_addr;
+wire [`REQ_BW-1:0]     b2x_len;
+wire [1:0]         b2x_cmd;
 
 // SDR_XFR_CTL
-wire [3:0] 		x2b_pre_ok;
+wire [3:0]         x2b_pre_ok;
 wire [`SDR_REQ_ID_W-1:0]xfr_id;
-wire [APP_DW-1:0] 	app_rd_data;
-wire 			sdr_cs_n, sdr_cke, sdr_ras_n, sdr_cas_n, sdr_we_n; 
-wire [SDR_BW-1:0] 	sdr_dqm;
-wire [1:0] 		sdr_ba;
-wire [12:0] 		sdr_addr;
-wire [SDR_DW-1:0] 	sdr_dout;
-wire [SDR_DW-1:0] 	sdr_dout_int;
-wire [SDR_BW-1:0] 	sdr_den_n;
-wire [SDR_BW-1:0] 	sdr_den_n_int;
+wire [APP_DW-1:0]     app_rd_data;
+wire             sdr_cs_n, sdr_cke, sdr_ras_n, sdr_cas_n, sdr_we_n; 
+wire [SDR_BW-1:0]     sdr_dqm;
+wire [1:0]         sdr_ba;
+wire [12:0]         sdr_addr;
+wire [SDR_DW-1:0]     sdr_dout;
+wire [SDR_DW-1:0]     sdr_dout_int;
+wire [SDR_BW-1:0]     sdr_den_n;
+wire [SDR_BW-1:0]     sdr_den_n_int;
 
-wire [1:0] 		xfr_bank_sel;
+wire [1:0]         xfr_bank_sel;
 
 wire [APP_AW-1:0]        app_req_addr;
 wire [APP_RW-1:0]        app_req_len;
@@ -287,13 +287,13 @@ end
 sdrc_req_gen #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_req_gen (
           .clk                (clk          ),
           .reset_n            (reset_n            ),
-	  .cfg_colbits        (cfg_colbits        ),
+      .cfg_colbits        (cfg_colbits        ),
           .sdr_width          (sdr_width          ),
 
-	/* Req to xfr_ctl */
+    /* Req to xfr_ctl */
           .r2x_idle           (r2x_idle           ),
 
-	/* Request from app */
+    /* Request from app */
           .req                (app_req            ),
           .req_id             (4'b0               ),
           .req_addr           (app_req_addr       ),
@@ -301,7 +301,7 @@ sdrc_req_gen #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_req_gen (
           .req_wrap           (app_req_wrap       ),
           .req_wr_n           (app_req_wr_n       ),
           .req_ack            (app_req_ack        ),
-		
+        
        /* Req to bank_ctl */
           .r2b_req            (r2b_req            ),
           .r2b_req_id         (r2b_req_id         ),
@@ -327,7 +327,7 @@ sdrc_bank_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bank_ctl (
           .clk                (clk          ),
           .reset_n            (reset_n            ),
           .a2b_req_depth      (cfg_req_depth      ),
-			      
+                  
       /* Req from req_gen */
           .r2b_req            (r2b_req            ),
           .r2b_req_id         (r2b_req_id         ),
@@ -341,7 +341,7 @@ sdrc_bank_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bank_ctl (
           .r2b_write          (r2b_write          ),
           .b2r_arb_ok         (b2r_arb_ok         ),
           .b2r_ack            (b2r_ack            ),
-			      
+                  
       /* Transfer request to xfr_ctl */
           .b2x_idle           (b2x_idle           ),
           .b2x_req            (b2x_req            ),
@@ -354,7 +354,7 @@ sdrc_bank_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bank_ctl (
           .b2x_len            (b2x_len            ),
           .b2x_cmd            (b2x_cmd            ),
           .x2b_ack            (x2b_ack            ),
-		     
+             
       /* Status from xfr_ctl */
           .b2x_tras_ok        (b2x_tras_ok        ),
           .x2b_refresh        (x2b_refresh        ),
@@ -383,7 +383,7 @@ sdrc_bank_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bank_ctl (
 sdrc_xfr_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_xfr_ctl (
           .clk                (clk          ),
           .reset_n            (reset_n            ),
-			    
+                
       /* Transfer request from bank_ctl */
           .r2x_idle           (r2x_idle           ),
           .b2x_idle           (b2x_idle           ),
@@ -397,7 +397,7 @@ sdrc_xfr_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_xfr_ctl (
           .b2x_len            (b2x_len            ),
           .b2x_cmd            (b2x_cmd            ),
           .x2b_ack            (x2b_ack            ),
-		     
+             
        /* Status to bank_ctl, req_gen */
           .b2x_tras_ok        (b2x_tras_ok        ),
           .x2b_refresh        (x2b_refresh        ),
@@ -405,7 +405,7 @@ sdrc_xfr_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_xfr_ctl (
           .x2b_act_ok         (x2b_act_ok         ),
           .x2b_rdok           (x2b_rdok           ),
           .x2b_wrok           (x2b_wrok           ),
-		    
+            
        /* SDRAM I/O */
           .sdr_cs_n           (sdr_cs_n           ),
           .sdr_cke            (sdr_cke            ),
@@ -430,11 +430,11 @@ sdrc_xfr_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_xfr_ctl (
           .x2a_rddt           (x2a_rddt           ),
           .x2a_rdok           (x2a_rdok           ),
           .sdr_init_done      (sdr_init_done      ),
-			    
+                
       /* SDRAM Parameters */
           .sdram_enable       (cfg_sdr_en         ),
           .sdram_mode_reg     (cfg_sdr_mode_reg   ),
-		    
+            
       /* current xfr bank */
           .xfr_bank_sel       (xfr_bank_sel       ),
 
@@ -465,7 +465,7 @@ sdrc_bs_convert #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bs_convert (
           .x2a_rdstart        (x2a_rdstart        ),
           .x2a_rdlast         (x2a_rdlast         ),
           .x2a_rdok           (x2a_rdok           ),
-	  // Read Interface outputs
+      // Read Interface outputs
           .x2a_rddt           (x2a_rddt           ),
 
           // Write Interface, Inputs
@@ -483,10 +483,10 @@ sdrc_bs_convert #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_bs_convert (
           .app_wr_data        (app_wr_data        ),
           .app_wr_en_n        (app_wr_en_n        ),
           .app_wr_next        (app_wr_next_req    ),
-	  .app_last_wr        (app_last_wr        ),
+      .app_last_wr        (app_last_wr        ),
           .app_rd_data        (app_rd_data        ),
           .app_rd_valid       (app_rd_valid       ),
-	  .app_last_rd        (app_last_rd        )
+      .app_last_rd        (app_last_rd        )
 
        );   
    
