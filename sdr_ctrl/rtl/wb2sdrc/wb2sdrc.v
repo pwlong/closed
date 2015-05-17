@@ -46,59 +46,48 @@ later version.
 *******************************************************************/
 
 
-module wb2sdrc (
+module wb2sdrc #(
+parameter      dw              = 32,  // data width
+parameter      tw              = 8,   // tag id width
+parameter      bl              = 9,   // burst_lenght_width 
+parameter      APP_AW          = 26   // Application Address Width
+)
+(
       // WB bus
-                    wb_rst_i            ,
-                    wb_clk_i            ,
+      wishbone_interface.slave wbi,
+     /*
+                    wbi.wb_rst_i            ,
+                    wbi.wb_clk_i            ,
 
-                    wb_stb_i            ,
-                    wb_ack_o            ,
-                    wb_addr_i           ,
-                    wb_we_i             ,
-                    wb_dat_i            ,
-                    wb_sel_i            ,
-                    wb_dat_o            ,
-                    wb_cyc_i            ,
-                    wb_cti_i            , 
-
+                    wbi.wb_stb_i            ,
+                    wbi.wb_ack_o            ,
+                    wbi.wb_addr_i           ,
+                    wbi.wb_we_i             ,
+                    wbi.wb_dat_i            ,
+                    wbi.wb_sel_i            ,
+                    wbi.wb_dat_o            ,
+                    wbi.wb_cyc_i            ,
+                    wbi.wb_cti_i            , 
+      */
 
       //SDRAM Controller Hand-Shake Signal 
-                    sdram_clk           ,
-                    sdram_resetn        ,
-                    sdr_req             ,
-                    sdr_req_addr        ,
-                    sdr_req_len         ,
-                    sdr_req_wr_n        ,
-                    sdr_req_ack         ,
-                    sdr_busy_n          ,
-                    sdr_wr_en_n         ,
-                    sdr_wr_next         ,
-                    sdr_rd_valid        ,
-                    sdr_last_rd         ,
-                    sdr_wr_data         ,
-                    sdr_rd_data        
+        input                   sdram_clk          , // sdram clock
+        input                   sdram_resetn       , // sdram reset
+        output                  sdr_req            , // SDRAM request
+        output [APP_AW-1:0]           sdr_req_addr ,// SDRAM Request Address
+        output [bl-1:0]         sdr_req_len        ,
+        output                  sdr_req_wr_n       , // 0 - Write, 1 -> Read
+        input                   sdr_req_ack        , // SDRAM request Accepted
+        input                   sdr_busy_n         , // 0 -> sdr busy
+        output [dw/8-1:0]       sdr_wr_en_n        , // Active low sdr byte-wise write data valid
+        input                   sdr_wr_next        , // Ready to accept the next write
+        input                   sdr_rd_valid       , // sdr read valid
+        input                   sdr_last_rd        , // Indicate last Read of Burst Transfer
+        output [dw-1:0]         sdr_wr_data        , // sdr write data
+        input  [dw-1:0]         sdr_rd_data          // sdr read data
 
       ); 
 
-parameter      dw              = 32;  // data width
-parameter      tw              = 8;   // tag id width
-parameter      bl              = 9;   // burst_lenght_width 
-parameter      APP_AW          = 26;  // Application Address Width
-//--------------------------------------
-// Wish Bone Interface
-// -------------------------------------      
-input                   wb_rst_i           ;
-input                   wb_clk_i           ;
-
-input                   wb_stb_i           ;
-output                  wb_ack_o           ;
-input [APP_AW-1:0]      wb_addr_i          ;
-input                   wb_we_i            ; // 1 - Write , 0 - Read
-input [dw-1:0]          wb_dat_i           ;
-input [dw/8-1:0]        wb_sel_i           ; // Byte enable
-output [dw-1:0]         wb_dat_o           ;
-input                   wb_cyc_i           ;
-input  [2:0]            wb_cti_i           ;
 /***************************************************
 The Cycle Type Idenfier [CTI_IO()] Address Tag provides 
 additional information about the current cycle. 
@@ -118,20 +107,6 @@ CTI_O(2:0) Description
 //--------------------------------------------
 // SDRAM controller Interface 
 //--------------------------------------------
-input                   sdram_clk          ; // sdram clock
-input                   sdram_resetn       ; // sdram reset
-output                  sdr_req            ; // SDRAM request
-output [APP_AW-1:0]           sdr_req_addr       ; // SDRAM Request Address
-output [bl-1:0]         sdr_req_len        ;
-output                  sdr_req_wr_n       ; // 0 - Write, 1 -> Read
-input                   sdr_req_ack        ; // SDRAM request Accepted
-input                   sdr_busy_n         ; // 0 -> sdr busy
-output [dw/8-1:0]       sdr_wr_en_n        ; // Active low sdr byte-wise write data valid
-input                   sdr_wr_next        ; // Ready to accept the next write
-input                   sdr_rd_valid       ; // sdr read valid
-input                   sdr_last_rd        ; // Indicate last Read of Burst Transfer
-output [dw-1:0]         sdr_wr_data        ; // sdr write data
-input  [dw-1:0]         sdr_rd_data        ; // sdr read data
 
 //----------------------------------------------------
 // Wire Decleration
@@ -155,9 +130,9 @@ reg                     pending_read       ;
 //                     available
 //-----------------------------------------------------------------------------
 
-assign wb_ack_o = (wb_stb_i && wb_cyc_i && wb_we_i) ?  // Write Phase
+assign wbi.wb_ack_o = (wbi.wb_stb_i && wbi.wb_cyc_i && wbi.wb_we_i) ?  // Write Phase
 	                  ((!cmdfifo_full) && (!wrdatafifo_full)) :
-		  (wb_stb_i && wb_cyc_i && !wb_we_i) ? // Read Phase 
+		  (wbi.wb_stb_i && wbi.wb_cyc_i && !wbi.wb_we_i) ? // Read Phase 
 		           !rddatafifo_empty : 1'b0;
 
 //---------------------------------------------------------------------------
@@ -167,8 +142,8 @@ assign wb_ack_o = (wb_stb_i && wb_cyc_i && wb_we_i) ?  // Write Phase
 //    If Read Request - Generate write, when command fifo not full and there
 //                      is no pending read request.
 //---------------------------------------------------------------------------
-wire           cmdfifo_wr   = (wb_stb_i && wb_cyc_i && wb_we_i && (!cmdfifo_full) ) ? wb_ack_o :
-	                      (wb_stb_i && wb_cyc_i && !wb_we_i && (!cmdfifo_full)) ? !pending_read: 1'b0 ; 
+wire           cmdfifo_wr   = (wbi.wb_stb_i && wbi.wb_cyc_i && wbi.wb_we_i && (!cmdfifo_full) ) ? wbi.wb_ack_o :
+	                      (wbi.wb_stb_i && wbi.wb_cyc_i && !wbi.wb_we_i && (!cmdfifo_full)) ? !pending_read: 1'b0 ; 
 
 //---------------------------------------------------------------------------
 // command fifo read generation
@@ -199,13 +174,13 @@ wire [bl-1:0]  burst_length  = 1;  // 0 Mean 1 Transfer
 //     set - with Read Request 
 //     reset - with Read Request + Ack
 // ----------------------------------------------------------------------------
-always @(posedge wb_rst_i or posedge wb_clk_i) begin
-   if(wb_rst_i) begin
+always @(posedge wbi.wb_rst_i or posedge wbi.wb_clk_i) begin
+   if(wbi.wb_rst_i) begin
        pending_read <= 1'b0;
    end else begin
-      //pending_read <=  wb_stb_i & wb_cyc_i & !wb_we_i & !wb_ack_o;
-      pending_read <=   (cmdfifo_wr && !wb_we_i) ? 1'b1:
-	                (wb_stb_i & wb_cyc_i & !wb_we_i & wb_ack_o) ? 1'b0: pending_read;
+      //pending_read <=  wbi.wb_stb_i & wbi.wb_cyc_i & !wbi.wb_we_i & !wbi.wb_ack_o;
+      pending_read <=   (cmdfifo_wr && !wbi.wb_we_i) ? 1'b1:
+	                (wbi.wb_stb_i & wbi.wb_cyc_i & !wbi.wb_we_i & wbi.wb_ack_o) ? 1'b0: pending_read;
    end
 end
 
@@ -216,12 +191,12 @@ end
    // Address + Burst Length + W/R Request 
     async_fifo #(.W(APP_AW+bl+1),.DP(4),.WR_FAST(1'b0), .RD_FAST(1'b0)) u_cmdfifo (
      // Write Path Sys CLock Domain
-          .wr_clk             (wb_clk_i           ),
-          .wr_reset_n         (!wb_rst_i          ),
+          .wr_clk             (wbi.wb_clk_i           ),
+          .wr_reset_n         (!wbi.wb_rst_i          ),
           .wr_en              (cmdfifo_wr         ),
           .wr_data            ({burst_length, 
-	                        !wb_we_i, 
-				wb_addr_i}        ),
+	                        !wbi.wb_we_i, 
+				wbi.wb_addr_i}        ),
           .afull              (                   ),
           .full               (cmdfifo_full       ),
 
@@ -237,7 +212,7 @@ end
      );
 
 // synopsys translate_off
-always @(posedge wb_clk_i) begin
+always @(posedge wbi.wb_clk_i) begin
   if (cmdfifo_full == 1'b1 && cmdfifo_wr == 1'b1)  begin
      $display("ERROR:%m COMMAND FIFO WRITE OVERFLOW");
   end 
@@ -256,7 +231,7 @@ end
 //   Note: Ack signal generation already taking account of FIFO full condition
 // ---------------------------------------------------------------------
 
-wire  wrdatafifo_wr  = wb_ack_o & wb_we_i ;
+wire  wrdatafifo_wr  = wbi.wb_ack_o & wbi.wb_we_i ;
 
 //------------------------------------------------------------------------
 // Write Data FIFO Read Generation, When ever Next Write request generated
@@ -274,11 +249,11 @@ wire  wrdatafifo_rd  = sdr_wr_next;
    // Write DATA + Data Mask FIFO
     async_fifo #(.W(dw+(dw/8)), .DP(8), .WR_FAST(1'b0), .RD_FAST(1'b1)) u_wrdatafifo (
        // Write Path , System clock domain
-          .wr_clk             (wb_clk_i           ),
-          .wr_reset_n         (!wb_rst_i          ),
+          .wr_clk             (wbi.wb_clk_i           ),
+          .wr_reset_n         (!wbi.wb_rst_i          ),
           .wr_en              (wrdatafifo_wr      ),
-          .wr_data            ({~wb_sel_i, 
-	                         wb_dat_i}        ),
+          .wr_data            ({~wbi.wb_sel_i, 
+	                         wbi.wb_dat_i}        ),
           .afull              (                   ),
           .full               (wrdatafifo_full    ),
 
@@ -293,7 +268,7 @@ wire  wrdatafifo_rd  = sdr_wr_next;
                                 sdr_wr_data}      )
      );
 // synopsys translate_off
-always @(posedge wb_clk_i) begin
+always @(posedge wbi.wb_clk_i) begin
   if (wrdatafifo_full == 1'b1 && wrdatafifo_wr == 1'b1)  begin
      $display("ERROR:%m WRITE DATA FIFO WRITE OVERFLOW");
   end 
@@ -319,7 +294,7 @@ wire    rddatafifo_wr = sdr_rd_valid;
 // request.
 // Note: Ack generation is already accounted the write FIFO Not Empty
 //       condition
-wire    rddatafifo_rd = wb_ack_o & !wb_we_i;
+wire    rddatafifo_rd = wbi.wb_ack_o & !wbi.wb_we_i;
 
 //-------------------------------------------------------------------------
 // Async Read FIFO
@@ -344,13 +319,13 @@ wire    rddatafifo_rd = wb_ack_o & !wb_we_i;
 
 
        // Read Path , SYS clock domain
-          .rd_clk             (wb_clk_i           ),
-          .rd_reset_n         (!wb_rst_i          ),
+          .rd_clk             (wbi.wb_clk_i           ),
+          .rd_reset_n         (!wbi.wb_rst_i          ),
           .empty              (rddatafifo_empty   ),
           .aempty             (                   ),
           .rd_en              (rddatafifo_rd      ),
           .rd_data            ({rd_eop,
-                                wb_dat_o}         )
+                                wbi.wb_dat_o}         )
      );
 
 // synopsys translate_off
@@ -360,7 +335,7 @@ always @(posedge sdram_clk) begin
   end 
 end 
 
-always @(posedge wb_clk_i) begin
+always @(posedge wbi.wb_clk_i) begin
    if (rddatafifo_empty == 1'b1 && rddatafifo_rd == 1'b1) begin
       $display("ERROR:%m READ DATA FIFO READ OVERFLOW");
    end

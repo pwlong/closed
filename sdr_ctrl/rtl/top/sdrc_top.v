@@ -81,10 +81,11 @@ module sdrc_top
   input [1:0] cfg_sdr_width      , // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
   input [1:0] cfg_colbits        , // 2'b00 - 8 Bit column address, 
                                               // 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
-  
+  wishbone_interface.master wbi,
   //--------------------------------------
   // Wish Bone Interface
   // -------------------------------------      
+ /*
   input                   wb_rst_i           ,
   input                   wb_clk_i           ,
   
@@ -97,7 +98,7 @@ module sdrc_top
   output [dw-1:0]         wb_dat_o           ,
   input                   wb_cyc_i           ,
   input  [2:0]            wb_cti_i           ,
-  
+  */
   //------------------------------------------------
   // Interface to SDRAMs
   //------------------------------------------------
@@ -165,19 +166,7 @@ wire #(1.0) sdram_pad_clk = sdram_bus.sdram_clk;
 /************** Ends Here **************************/
 wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
       // WB bus
-          .wb_rst_i           (wb_rst_i           ) ,
-          .wb_clk_i           (wb_clk_i           ) ,
-
-          .wb_stb_i           (wb_stb_i           ) ,
-          .wb_ack_o           (wb_ack_o           ) ,
-          .wb_addr_i          (wb_addr_i          ) ,
-          .wb_we_i            (wb_we_i            ) ,
-          .wb_dat_i           (wb_dat_i           ) ,
-          .wb_sel_i           (wb_sel_i           ) ,
-          .wb_dat_o           (wb_dat_o           ) ,
-          .wb_cyc_i           (wb_cyc_i           ) ,
-          .wb_cti_i           (wb_cti_i           ) , 
-
+      .wbi(wbi),
 
       //SDRAM Controller Hand-Shake Signal 
           .sdram_clk          (sdram_bus.sdram_clk          ) ,

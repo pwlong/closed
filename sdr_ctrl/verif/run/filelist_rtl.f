@@ -1,5 +1,6 @@
 +incdir+../../rtl/core \
 ../../rtl/interfaces/sdr_if.sv \
+../../rtl/interfaces/wbinterface.sv \
 ../../rtl/top/sdrc_top.v \
 ../../rtl/wb2sdrc/wb2sdrc.v \
 ../../rtl/lib/async_fifo.v  \

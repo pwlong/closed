@@ -24,6 +24,8 @@ interface wishbone_interface(
                     output wb_cti_i,
                     output wb_cyc_i,
                     input  wb_ack_o,
+                    input  wb_clk_i,
+                    input  wb_rst_i,
                     input  wb_dat_o );
 
     modport slave(  input  wb_stb_i,
@@ -33,6 +35,8 @@ interface wishbone_interface(
                     input  wb_cti_i,
                     input  wb_we_i,
                     input  wb_cyc_i,
+                    input  wb_clk_i,
+                    input  wb_rst_i,
                     output wb_ack_o,
                     output wb_dat_o );
 endinterface

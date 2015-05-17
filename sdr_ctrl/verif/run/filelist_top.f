@@ -2,6 +2,7 @@
 +define+VERBOSE \
 +incdir+../../rtl/core \
 ../../rtl/interfaces/sdr_if.sv \
+../../rtl/interfaces/wbinterface.sv \
 ../tb/tb_top.sv \
 ../model/IS42VM16400K.V \
 ../model/mt48lc2m32b2.v \

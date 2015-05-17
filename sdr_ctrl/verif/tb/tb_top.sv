@@ -87,27 +87,6 @@ parameter      bl              = 5;   // burst_lenght_width
   localparam    SDR_BW          = (SDR_DW / 8); // SDRAM Byte Width
   localparam    CFG_COLBITS     = 2'b00;        // 8 Bit Column Address
 
-
-
-                                  
-//-------------------------------------------
-// WISH BONE Interface
-//-------------------------------------------
-//--------------------------------------
-// Wish Bone Interface
-// -------------------------------------      
-reg             wb_stb_i           ;
-wire            wb_ack_o           ;
-reg  [25:0]     wb_addr_i          ;
-reg             wb_we_i            ; // 1 - Write, 0 - Read
-reg  [dw-1:0]   wb_dat_i           ;
-reg  [dw/8-1:0] wb_sel_i           ; // Byte enable
-wire  [dw-1:0]  wb_dat_o           ;
-reg             wb_cyc_i           ;
-reg   [2:0]     wb_cti_i           ;
-
-
-
 //--------------------------------------------
 // SDRAM I/F 
 //--------------------------------------------
@@ -137,6 +116,7 @@ wire                  sdr_init_done      ; // SDRAM Init Done
 wire #(2.0) sdram_clk_d   = sdram_clk;
 
 sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN);
+wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
 
 sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
 
@@ -144,19 +124,7 @@ sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
           .cfg_sdr_width      (CFG_SDR_WIDTH      ), 
           .cfg_colbits        (CFG_COLBITS        ),
 /* WISH BONE */
-          .wb_rst_i           (!RESETN            ),
-          .wb_clk_i           (sys_clk            ),
-
-          .wb_stb_i           (wb_stb_i           ),
-          .wb_ack_o           (wb_ack_o           ),
-          .wb_addr_i          (wb_addr_i          ),
-          .wb_we_i            (wb_we_i            ),
-          .wb_dat_i           (wb_dat_i           ),
-          .wb_sel_i           (wb_sel_i           ),
-          .wb_dat_o           (wb_dat_o           ),
-          .wb_cyc_i           (wb_cyc_i           ),
-          .wb_cti_i           (wb_cti_i           ), 
-
+          .wbi(wbi),
 /* Interface to SDRAMs */
           .sdram_bus            (sdram_bus            ),           
 /* commenting out so we can use interfaces PWL
@@ -254,12 +222,12 @@ reg [31:0] StartAddr;
 
 initial begin //{
   ErrCnt          = 0;
-   wb_addr_i      = 0;
-   wb_dat_i      = 0;
-   wb_sel_i       = 4'h0;
-   wb_we_i        = 0;
-   wb_stb_i       = 0;
-   wb_cyc_i       = 0;
+   wbi.wb_addr_i      = 0;
+   wbi.wb_dat_i      = 0;
+   wbi.wb_sel_i       = 4'h0;
+   wbi.wb_we_i        = 0;
+   wbi.wb_stb_i       = 0;
+   wbi.wb_cyc_i       = 0;
 
   RESETN    = 1'h1;
 
@@ -455,27 +423,27 @@ begin
    $display("Write Address: %x, Burst Size: %d",Address,bl);
 
    for(i=0; i < bl; i++) begin
-      wb_stb_i        = 1;
-      wb_cyc_i        = 1;
-      wb_we_i         = 1;
-      wb_sel_i        = 4'b1111;
-      wb_addr_i       = Address[31:2]+i;
-      wb_dat_i        = $random & 32'hFFFFFFFF;
-      dfifo.push_back(wb_dat_i);
+      wbi.wb_stb_i        = 1;
+      wbi.wb_cyc_i        = 1;
+      wbi.wb_we_i         = 1;
+      wbi.wb_sel_i        = 4'b1111;
+      wbi.wb_addr_i       = Address[31:2]+i;
+      wbi.wb_dat_i        = $random & 32'hFFFFFFFF;
+      dfifo.push_back(wbi.wb_dat_i);
 
       do begin
           @ (posedge sys_clk);
-      end while(wb_ack_o == 1'b0);
+      end while(wbi.wb_ack_o == 1'b0);
           @ (negedge sys_clk);
    
-       $display("Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,wb_addr_i,wb_dat_i);
+       $display("Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,wbi.wb_addr_i,wbi.wb_dat_i);
    end
-   wb_stb_i        = 0;
-   wb_cyc_i        = 0;
-   wb_we_i         = 'hx;
-   wb_sel_i        = 'hx;
-   wb_addr_i       = 'hx;
-   wb_dat_i        = 'hx;
+   wbi.wb_stb_i        = 0;
+   wbi.wb_cyc_i        = 0;
+   wbi.wb_we_i         = 'hx;
+   wbi.wb_sel_i        = 'hx;
+   wbi.wb_addr_i       = 'hx;
+   wbi.wb_dat_i        = 'hx;
 end
 endtask
 
@@ -492,27 +460,27 @@ begin
    @ (negedge sys_clk);
 
       for(j=0; j < bl; j++) begin
-         wb_stb_i        = 1;
-         wb_cyc_i        = 1;
-         wb_we_i         = 0;
-         wb_addr_i       = Address[31:2]+j;
+         wbi.wb_stb_i        = 1;
+         wbi.wb_cyc_i        = 1;
+         wbi.wb_we_i         = 0;
+         wbi.wb_addr_i       = Address[31:2]+j;
 
          exp_data        = dfifo.pop_front(); // Exptected Read Data
          do begin
              @ (posedge sys_clk);
-         end while(wb_ack_o == 1'b0);
-         if(wb_dat_o !== exp_data) begin
-             $display("READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,wb_addr_i,wb_dat_o,exp_data);
+         end while(wbi.wb_ack_o == 1'b0);
+         if(wbi.wb_dat_o !== exp_data) begin
+             $display("READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o,exp_data);
              ErrCnt = ErrCnt+1;
          end else begin
-             $display("READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,wb_addr_i,wb_dat_o);
+             $display("READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o);
          end 
          @ (negedge sdram_clk);
       end
-   wb_stb_i        = 0;
-   wb_cyc_i        = 0;
-   wb_we_i         = 'hx;
-   wb_addr_i       = 'hx;
+   wbi.wb_stb_i        = 0;
+   wbi.wb_cyc_i        = 0;
+   wbi.wb_we_i         = 'hx;
+   wbi.wb_addr_i       = 'hx;
 end
 endtask
 
