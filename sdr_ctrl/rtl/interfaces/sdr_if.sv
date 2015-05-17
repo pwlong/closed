@@ -58,9 +58,9 @@ interface sdr_bus #(
   `define CMD_AUTO_REFRESH       4'b0001
   `define CMD_LOAD_MODE_REGISTER 4'b0000
   bit [3:0] cmd = {sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n};
-  bit cmd_idle  = (cmd === `CMD_NOP_I && cmd === `CMD_NOP && cmd === `CMD_ACTIVE || cmd === `CMD_AUTO_REFRESH || cmd === `CMD_LOAD_MODE_REGISTER || cmd === `CMD_PRECHARGE);
-  bit cmd_act   = (cmd === `CMD_NOP_I && cmd === `CMD_NOP && cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE);
-  bit cmd_xfr   = (cmd_act && cmd === `CMD_BURST_TERMINATE);
+  bit cmd_idle  = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_ACTIVE || cmd === `CMD_AUTO_REFRESH || cmd === `CMD_LOAD_MODE_REGISTER || cmd === `CMD_PRECHARGE);
+  bit cmd_act   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE);
+  bit cmd_xfr   = (cmd_act || cmd === `CMD_BURST_TERMINATE);
   
   // store the state of each bank
   wire [3:0] [2:0] bank_st;
