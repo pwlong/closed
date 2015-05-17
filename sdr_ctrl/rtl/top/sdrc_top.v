@@ -99,13 +99,13 @@ wire  [dw-1:0]        app_rd_data        ; // sdr read data
 /****************************************
 *  These logic has to be implemented using Pads
 *  **************************************/
-wire  [SDR_DW-1:0]    pad_sdr_din         ; // SDRA Data Input
+wire  [SDR_DW-1:0]    sdr_din             ; // SDRA Data Input
 wire  [SDR_DW-1:0]    sdr_dout            ; // SDRAM Data Output
 wire  [SDR_BW-1:0]    sdr_den_n           ; // SDRAM Data Output enable
 
 
 assign   sdram_bus.sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}}; 
-assign   pad_sdr_din = sdram_bus.sdr_dq;
+assign   sdr_din = sdram_bus.sdr_dq;
 
 // sdram pad clock is routed back through pad
 // SDRAM Clock from Pad, used for registering Read Data
@@ -164,7 +164,7 @@ wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
               .sdr_dqm            (sdram_bus.sdr_dqm  ) ,
               .sdr_ba             (sdram_bus.sdr_ba   ) ,
               .sdr_addr           (sdram_bus.sdr_addr ) , 
-              .pad_sdr_din        (pad_sdr_din        ) ,
+              .sdr_din            (sdr_din            ) ,
               .sdr_dout           (sdr_dout           ) ,
               .sdr_den_n          (sdr_den_n          ) ,
             /* Configuration Bus */
