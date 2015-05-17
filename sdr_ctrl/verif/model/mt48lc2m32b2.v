@@ -39,23 +39,36 @@
 
 `timescale 1ns / 1ps
 
-module mt48lc2m32b2 (Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, Cas_n, We_n, Dqm);
+module mt48lc2m32b2 (
+    sdr_bus.ram sdram_bus
+    //Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, Cas_n, We_n, Dqm
+);
 
     parameter addr_bits =      11;
     parameter data_bits =      32;
     parameter col_bits  =       8;
     parameter mem_sizes =  524287;
 
-    inout     [data_bits - 1 : 0] Dq;
-    input     [addr_bits - 1 : 0] Addr;
-    input                 [1 : 0] Ba;
-    input                         Clk;
-    input                         Cke;
-    input                         Cs_n;
-    input                         Ras_n;
-    input                         Cas_n;
-    input                         We_n;
-    input                 [3 : 0] Dqm;
+    wire     [data_bits - 1 : 0] Dq;
+    wire     [addr_bits - 1 : 0] Addr;
+    wire                 [1 : 0] Ba;
+    wire                         Clk;
+    wire                         Cke;
+    wire                         Cs_n;
+    wire                         Ras_n;
+    wire                         Cas_n;
+    wire                         We_n;
+    wire                 [3 : 0] Dqm;
+    assign Dq    = sdram_bus.sdr_dq;
+    assign Addr  = sdram_bus.sdr_addr;
+    assign Ba    = sdram_bus.sdr_ba;
+    assign Clk   = sdram_bus.sdram_clk_d;
+    assign Cke   = sdram_bus.sdr_cke;
+    assign Cs_n  = sdram_bus.sdr_cs_n;
+    assign Ras_n = sdram_bus.sdr_ras_n;
+    assign Cas_n = sdram_bus.sdr_cas_n;
+    assign We_n  = sdram_bus.sdr_we_n;
+    assign Dqm   = sdram_bus.sdr_dqm;
 
     reg       [data_bits - 1 : 0] Bank0 [0 : mem_sizes];
     reg       [data_bits - 1 : 0] Bank1 [0 : mem_sizes];
@@ -123,7 +136,7 @@ module mt48lc2m32b2 (Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, Cas_n, We_n, Dqm);
     wire      Debug            = 1'b1;                          // Debug messages : 1 = On
     wire      Dq_chk           = Sys_clk & Data_in_enable;      // Check setup/hold time for DQ
     
-    assign    Dq               = Dq_reg;                        // DQ buffer
+    assign    sdram_bus.sdr_dq = Dq_reg;                        // DQ buffer
 
     // Commands Operation
     `define   ACT       0
