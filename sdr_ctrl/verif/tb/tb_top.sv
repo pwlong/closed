@@ -50,15 +50,18 @@
 
 // This testbench verify with SDRAM TOP
 
-module tb_top;
-
-parameter P_SYS  = 10;     //    200MHz
-parameter P_SDR  = 20;     //    100MHz
-
-// General
-reg            RESETN;
-reg            sdram_clk;
-reg            sys_clk;
+module tb_top #(
+    parameter P_SYS  = 10,     //    200MHz
+    parameter P_SDR  = 20      //    100MHz
+)
+(
+    output logic sys_clk,
+    output logic sdram_clk,
+    output logic sdram_clk_d,
+    output logic RESETN,
+    input wire sdr_init_done,
+    wishbone_interface.master wbi
+);
 
 initial sys_clk = 0;
 initial sdram_clk = 0;
@@ -66,144 +69,8 @@ initial sdram_clk = 0;
 always #(P_SYS/2) sys_clk = !sys_clk;
 always #(P_SDR/2) sdram_clk = !sdram_clk;
 
-parameter      dw              = 32;  // data width
-parameter      tw              = 8;   // tag id width
-parameter      bl              = 5;   // burst_lenght_width 
-
-//
-//  PWL added parameters to change the way the SDRAMs
-//      are instantiated and wired up
-//
-`ifdef SDR_32BIT
-  localparam    SDR_DW          = 32;           // SDRAM Data Width
-  localparam    CFG_SDR_WIDTH   = 2'b00;
-`elsif SDR_16BIT 
-  localparam    SDR_DW          = 16;           // SDRAM Data Width
-  localparam    CFG_SDR_WIDTH   = 2'b01;
-`else  // 8 BIT SDRAM
-  localparam    SDR_DW          = 08;           // SDRAM Data Width
-  localparam    CFG_SDR_WIDTH   = 2'b10;
-`endif
-  localparam    SDR_BW          = (SDR_DW / 8); // SDRAM Byte Width
-  localparam    CFG_COLBITS     = 2'b00;        // 8 Bit Column Address
-
-//--------------------------------------------
-// SDRAM I/F 
-//--------------------------------------------
-/*  kill this noise PWL
-`ifdef SDR_32BIT
-   wire [31:0]           Dq                 ; // SDRAM Read/Write Data Bus
-   wire [3:0]            sdr_dqm            ; // SDRAM DATA Mask
-`elsif SDR_16BIT 
-   wire [15:0]           Dq                 ; // SDRAM Read/Write Data Bus
-   wire [1:0]            sdr_dqm            ; // SDRAM DATA Mask
-`else 
-   wire [7:0]           Dq                 ; // SDRAM Read/Write Data Bus
-   wire [0:0]           sdr_dqm            ; // SDRAM DATA Mask
-`endif
-*/
-
-// instantiate an interface 
-// PWL need to hook this up to signals, no?
-
-wire [SDR_DW-1:0]     Dq                 ; // SDRAM Read/Write Data Bus
-wire [SDR_BW-1:0]     sdr_dqm            ; // SDRAM DATA Mask
-wire [1:0]            sdr_ba             ; // SDRAM Bank Select
-wire [12:0]           sdr_addr           ; // SDRAM ADRESS
-wire                  sdr_init_done      ; // SDRAM Init Done 
-
 // to fix the sdram interface timing issue
-wire #(2.0) sdram_clk_d   = sdram_clk;
-
-sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN);
-wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
-
-sdrc_top #(.SDR_DW(SDR_DW),.SDR_BW(SDR_BW)) u_dut(
-
-/* SYSTEM */
-          .cfg_sdr_width      (CFG_SDR_WIDTH      ), 
-          .cfg_colbits        (CFG_COLBITS        ),
-/* WISH BONE */
-          .wbi(wbi),
-/* Interface to SDRAMs */
-          .sdram_bus            (sdram_bus            ),           
-/* commenting out so we can use interfaces PWL
-          .sdram_clk          (sdram_clk          ),
-          .sdram_resetn       (RESETN             ),
-          .sdr_cs_n           (sdr_cs_n           ),
-          .sdr_cke            (sdr_cke            ),
-          .sdr_ras_n          (sdr_ras_n          ),
-          .sdr_cas_n          (sdr_cas_n          ),
-          .sdr_we_n           (sdr_we_n           ),
-          .sdr_dqm            (sdr_dqm            ),
-          .sdr_ba             (sdr_ba             ),
-          .sdr_addr           (sdr_addr           ), 
-          .sdr_dq             (Dq                 ),
-*/ 
-
-    /* Parameters */
-          .sdr_init_done      (sdr_init_done      ),
-          .cfg_req_depth      (2'h3               ),  //how many req. buffer should hold
-          .cfg_sdr_en         (1'b1               ),
-          .cfg_sdr_mode_reg   (13'h033            ),
-          .cfg_sdr_tras_d     (4'h4               ),
-          .cfg_sdr_trp_d      (4'h2               ),
-          .cfg_sdr_trcd_d     (4'h2               ),
-          .cfg_sdr_cas        (3'h3               ),
-          .cfg_sdr_trcar_d    (4'h7               ),
-          .cfg_sdr_twr_d      (4'h1               ),
-          .cfg_sdr_rfsh       (12'h100            ), // reduced from 12'hC35
-          .cfg_sdr_rfmax      (3'h6               )
-
-);
-
-
-`ifdef SDR_32BIT
-mt48lc2m32b2 #(.data_bits(32)) u_sdram32 (
-          .Dq                 (Dq                 ) , 
-          .Addr               (sdr_addr[10:0]     ), 
-          .Ba                 (sdr_ba             ), 
-          .Clk                (sdram_clk_d        ), 
-          .Cke                (sdr_cke            ), 
-          .Cs_n               (sdr_cs_n           ), 
-          .Ras_n              (sdr_ras_n          ), 
-          .Cas_n              (sdr_cas_n          ), 
-          .We_n               (sdr_we_n           ), 
-          .Dqm                (sdr_dqm            )
-     );
-
-`elsif SDR_16BIT
-
-   IS42VM16400K u_sdram16 (
-          .dq                 (Dq                 ), 
-          .addr               (sdr_addr[11:0]     ), 
-          .ba                 (sdr_ba             ), 
-          .clk                (sdram_clk_d        ), 
-          .cke                (sdr_cke            ), 
-          .csb                (sdr_cs_n           ), 
-          .rasb               (sdr_ras_n          ), 
-          .casb               (sdr_cas_n          ), 
-          .web                (sdr_we_n           ), 
-          .dqm                (sdr_dqm            )
-    );
-`else 
-
-
-mt48lc8m8a2 #(.data_bits(8)) u_sdram8 (
-          .sdram_bus          (sdram_bus)
-/*        .Dq                 (Dq                 ) , 
-          .Addr               (sdr_addr[11:0]     ), 
-          .Ba                 (sdr_ba             ), 
-          .Clk                (sdram_clk_d        ), 
-          .Cke                (sdr_cke            ), 
-          .Cs_n               (sdr_cs_n           ), 
-          .Ras_n              (sdr_ras_n          ), 
-          .Cas_n              (sdr_cas_n          ), 
-          .We_n               (sdr_we_n           ), 
-          .Dqm                (sdr_dqm            )
-*/          
-     );
-`endif
+assign  #(2.0) sdram_clk_d   = sdram_clk;
 
 //--------------------
 // data/address/burst length FIFO
@@ -238,7 +105,7 @@ initial begin //{
   // Releasing reset
   RESETN    = 1'h1;
   #1000;
-  wait(u_dut.sdr_init_done == 1);
+  wait(sdr_init_done === 1);
 
   #1000;
   $display("-------------------------------------- ");

@@ -15,5 +15,5 @@
 ../../rtl/core/sdrc_bank_fsm.v \
 ../../rtl/core/sdrc_bs_convert.v \
 ../../rtl/core/sdrc_req_gen.v \
-../../rtl/core/sdrc_xfr_ctl.v
-
+../../rtl/core/sdrc_xfr_ctl.v \
+../tb/top.sv
