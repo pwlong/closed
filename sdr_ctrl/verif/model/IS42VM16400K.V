@@ -19,7 +19,10 @@
 
 `timescale 1ns / 1ps
 
-    module IS42VM16400K (dq, addr, ba, clk, cke, csb, rasb, casb, web, dqm);
+module IS42VM16400K (
+    sdr_bus.ram sdram_bus
+  //  dq, addr, ba, clk, cke, csb, rasb, casb, web, dqm
+);
 
     parameter no_of_bank =       2;
     parameter no_of_addr =      12;
@@ -91,16 +94,26 @@
     `endif
 
 
-    inout     [no_of_data - 1 : 0] dq;
-    input     [no_of_addr - 1 : 0] addr;
-    input     [no_of_bank - 1 : 0] ba;
-    input                         clk;
-    input                         cke;
-    input                         csb;
-    input                         rasb;
-    input                         casb;
-    input                         web;
-    input     [no_of_dqm - 1 : 0]  dqm;
+    wire     [no_of_data - 1 : 0] dq;
+    wire     [no_of_addr - 1 : 0] addr;
+    wire     [no_of_bank - 1 : 0] ba;
+    wire                         clk;
+    wire                         cke;
+    wire                         csb;
+    wire                         rasb;
+    wire                         casb;
+    wire                         web;
+    wire     [no_of_dqm - 1 : 0]  dqm;
+    assign dq   = sdram_bus.sdr_dq;
+    assign addr = sdram_bus.sdr_addr;
+    assign ba   = sdram_bus.sdr_ba;
+    assign clk  = sdram_bus.sdram_clk_d;
+    assign cke  = sdram_bus.sdr_cke;
+    assign csb  = sdram_bus.sdr_cs_n;
+    assign rasb = sdram_bus.sdr_ras_n;
+    assign casb = sdram_bus.sdr_cas_n;
+    assign web  = sdram_bus.sdr_we_n;
+    assign dqm  = sdram_bus.sdr_dqm;
 
 `protect
 
@@ -203,7 +216,7 @@
     wire      act_pwrdn        = (Act_b0 | Act_b1 | Act_b2 | Act_b3) & (~Read_cmd_received_cke & ~Write_cmd_received_cke);
     wire      pch_pwrdn        = (Pc_b0 & Pc_b1 & Pc_b2 & Pc_b3) & (~Read_cmd_received_cke | ~Write_cmd_received_cke);
 
-    assign    dq               = dq_reg;                        // DQ buffer
+    assign    sdram_bus.sdr_dq   = dq_reg;                        // DQ buffer
 
     // Commands Operation
     `define   ACT       0
