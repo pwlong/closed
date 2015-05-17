@@ -74,7 +74,7 @@ interface sdr_bus #(
   `define BANK_DMA_LAST_PRE 3'b100
   
   // commands in table 14, page 25 of dram datasheet
-  `define CMD_NOP_I              4'b1000
+  `define CMD_NOP_I              4'b1xxx
   `define CMD_NOP                4'b0111
   `define CMD_ACTIVE             4'b0011
   `define CMD_READ               4'b0101
@@ -83,18 +83,42 @@ interface sdr_bus #(
   `define CMD_PRECHARGE          4'b0010
   `define CMD_AUTO_REFRESH       4'b0001
   `define CMD_LOAD_MODE_REGISTER 4'b0000
+
+  typedef enum bit [3:0] {
+    CMD_LOAD_MODE_REGISTER = 4'b0000,
+    CMD_AUTO_REFRESH       = 4'b0001,
+    CMD_PRECHARGE          = 4'b0010,
+    CMD_ACTIVE             = 4'b0011,
+    CMD_WRITE              = 4'b0100,
+    CMD_READ               = 4'b0101,
+    CMD_BURST_TERMINATE    = 4'b0110,
+    CMD_NOP                = 4'b0111,
+    CMD_NOP_I              = 4'b1000,
+    CMD_NOP_II             = 4'b1001,
+    CMD_NOP_III            = 4'b1010,
+    CMD_NOP_IV             = 4'b1011,
+    CMD_NOP_V              = 4'b1100,
+    CMD_NOP_VI             = 4'b1101,
+    CMD_NOP_VII            = 4'b1110,
+    CMD_NOP_VIII           = 4'b1111
+  } cmd_t;
   
   // store the state of each bank
   wire [3:0] [2:0] bank_st;
   
   //Current Command
-  bit [3:0] cmd = {sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n};
+  cmd_t cmd;
+  assign cmd  = cmd_t'({sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n});
   
   //Acceptable Commands
-  bit cmd_nop   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP);
-  bit cmd_idle  = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_ACTIVE || cmd === `CMD_AUTO_REFRESH || cmd === `CMD_LOAD_MODE_REGISTER || cmd === `CMD_PRECHARGE);
-  bit cmd_act   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE);
-  bit cmd_xfr   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE || cmd === `CMD_BURST_TERMINATE);
+  bit cmd_nop;
+  bit cmd_idle;
+  bit cmd_act;
+  bit cmd_xfr;
+  assign cmd_nop   = (cmd[3] === 1'b1 | cmd === CMD_NOP);
+  assign cmd_idle  = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_ACTIVE | cmd === CMD_AUTO_REFRESH | cmd === CMD_LOAD_MODE_REGISTER | cmd === CMD_PRECHARGE);
+  assign cmd_act   = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
+  assign cmd_xfr   = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE | cmd === CMD_BURST_TERMINATE);
    
    initial begin
     //$monitor("%d", cmd);
@@ -104,16 +128,36 @@ interface sdr_bus #(
     //Bank 0 Asserts
     case (bank_st[0])
         `BANK_IDLE: begin
-            BANK_IDLE_assert: assert(cmd_idle);
+            $display("Bank is IDLE");
+            BANK_IDLE_assert: assert(cmd_idle) begin
+                $display("BANK_IDLE PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_idle);
+            end else begin
+                $display("BANK_IDLE FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_idle);
+            end
         end
         `BANK_PRE: begin
-            BANK_PRE_assert: assert(cmd_nop);
+            $display("Bank is PRECHARGED");
+            BANK_PRE_assert: assert(cmd_nop) begin
+                $display("BANK_PRE PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_nop);
+            end else begin
+                $display("BANK_PRE FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_nop);
+            end
         end
         `BANK_ACT: begin
-            BANK_ACT_assert: assert(cmd_act);
+            $display("Bank is ACTIVATED");
+            BANK_ACT_assert: assert(cmd_act) begin
+                $display("BANK_ACT_assert PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_act);
+            end else begin
+                $display("BANK_ACT_assert FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_act);
+            end
         end
         `BANK_XFR: begin
-            BANK_XFR_assert: assert(cmd_xfr);
+            $display("Bank is XFER");
+            BANK_XFR_assert: assert(cmd_xfr) begin
+                $display("BANK_XFR_assert PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_xfr);
+            end else begin
+                $display("BANK_XFR_assert FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_xfr);
+            end
         end
         `BANK_DMA_LAST_PRE: begin
             //ignore??
