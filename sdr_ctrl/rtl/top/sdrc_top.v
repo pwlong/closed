@@ -82,40 +82,7 @@ module sdrc_top
   input [1:0] cfg_colbits        , // 2'b00 - 8 Bit column address, 
                                               // 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
   wishbone_interface.master wbi,
-  //--------------------------------------
-  // Wish Bone Interface
-  // -------------------------------------      
- /*
-  input                   wb_rst_i           ,
-  input                   wb_clk_i           ,
-  
-  input                   wb_stb_i           ,
-  output                  wb_ack_o           ,
-  input  [APP_AW-1:0]     wb_addr_i          ,
-  input                   wb_we_i            , // 1 - Write, 0 - Read
-  input  [dw-1:0]         wb_dat_i           ,
-  input  [dw/8-1:0]       wb_sel_i           , // Byte enable
-  output [dw-1:0]         wb_dat_o           ,
-  input                   wb_cyc_i           ,
-  input  [2:0]            wb_cti_i           ,
-  */
-  //------------------------------------------------
-  // Interface to SDRAMs
-  //------------------------------------------------
-  //sdr_bus.ctrl sdram_bus,
   sdr_bus sdram_bus,
-  /* using the interface we designed so we don't need these PWL
-  output                  sdr_cke             , // SDRAM Clock Enable
-  output 			sdr_cs_n            , // SDRAM Chip Select
-  output                  sdr_ras_n           , // SDRAM ras
-  output                  sdr_cas_n           , // SDRAM cas
-  output			sdr_we_n            , // SDRAM write enable
-  output [SDR_BW-1:0] 	sdr_dqm             , // SDRAM Data Mask
-  output [1:0] 		sdr_ba              , // SDRAM Bank Enable
-  output [12:0] 		sdr_addr            , // SDRAM Address
-  inout [SDR_DW-1:0] 	sdr_dq              , // SDRA Data Input/output
-  */
-  
   //------------------------------------------------
   // Configuration Parameter
   //------------------------------------------------
