@@ -102,7 +102,8 @@ module sdrc_top
   //------------------------------------------------
   // Interface to SDRAMs
   //------------------------------------------------
-  sdr_bus.ctrl sdram_bus,
+  //sdr_bus.ctrl sdram_bus,
+  sdr_bus sdram_bus,
   /* using the interface we designed so we don't need these PWL
   output                  sdr_cke             , // SDRAM Clock Enable
   output 			sdr_cs_n            , // SDRAM Chip Select
@@ -240,9 +241,9 @@ sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_sdrc_core (
 	       );
         
     // update interface's storage of state of each bank
-    assign sdram_bus.state[0] = u_sdrc_core.u_bank_ctl.bank0_fsm.bank_st;
-    assign sdram_bus.state[1] = u_sdrc_core.u_bank_ctl.bank1_fsm.bank_st;
-    assign sdram_bus.state[2] = u_sdrc_core.u_bank_ctl.bank2_fsm.bank_st;
-    assign sdram_bus.state[3] = u_sdrc_core.u_bank_ctl.bank3_fsm.bank_st;
+    assign sdram_bus.bank_st[0] = u_sdrc_core.u_bank_ctl.bank0_fsm.bank_st;
+    assign sdram_bus.bank_st[1] = u_sdrc_core.u_bank_ctl.bank1_fsm.bank_st;
+    assign sdram_bus.bank_st[2] = u_sdrc_core.u_bank_ctl.bank2_fsm.bank_st;
+    assign sdram_bus.bank_st[3] = u_sdrc_core.u_bank_ctl.bank3_fsm.bank_st;
    
 endmodule // sdrc_core
