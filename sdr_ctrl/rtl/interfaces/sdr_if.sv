@@ -46,7 +46,13 @@ interface sdr_bus #(
     input sdram_clk_d,
     input sdram_resetn
   );
-
+// states from sdrc_bank_fsm.v - TODO: define these in a SINGLE place
+  `define BANK_IDLE         3'b000
+  `define BANK_PRE          3'b001
+  `define BANK_ACT          3'b010
+  `define BANK_XFR          3'b011
+  `define BANK_DMA_LAST_PRE 3'b100
+  
   // commands in table 14, page 25 of dram datasheet
   `define CMD_NOP_I              4'b1000
   `define CMD_NOP                4'b0111
@@ -57,69 +63,47 @@ interface sdr_bus #(
   `define CMD_PRECHARGE          4'b0010
   `define CMD_AUTO_REFRESH       4'b0001
   `define CMD_LOAD_MODE_REGISTER 4'b0000
-  bit [3:0] cmd = {sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n};
-  bit cmd_idle  = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_ACTIVE || cmd === `CMD_AUTO_REFRESH || cmd === `CMD_LOAD_MODE_REGISTER || cmd === `CMD_PRECHARGE);
-  bit cmd_act   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE);
-  bit cmd_xfr   = (cmd_act || cmd === `CMD_BURST_TERMINATE);
   
   // store the state of each bank
   wire [3:0] [2:0] bank_st;
-  // states from sdrc_bank_fsm.v - TODO: define these in a SINGLE place
-  `define BANK_IDLE         3'b000
-  `define BANK_PRE          3'b001
-  `define BANK_ACT          3'b010
-  `define BANK_XFR          3'b011
-  `define BANK_DMA_LAST_PRE 3'b100
   
-  sequence bank0_idle;
-    bank_st[0] === `BANK_IDLE && sdr_ba === 2'b00 && cmd_idle;
-  endsequence
+  //Current Command
+  bit [3:0] cmd = {sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n};
   
-  sequence bank0_act;
-    bank_st[0] === `BANK_ACT && sdr_ba === 2'b00 && cmd_act;
-  endsequence
+  //Acceptable Commands
+  bit cmd_nop   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP);
+  bit cmd_idle  = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_ACTIVE || cmd === `CMD_AUTO_REFRESH || cmd === `CMD_LOAD_MODE_REGISTER || cmd === `CMD_PRECHARGE);
+  bit cmd_act   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE);
+  bit cmd_xfr   = (cmd === `CMD_NOP_I || cmd === `CMD_NOP || cmd === `CMD_READ || cmd === `CMD_WRITE || cmd === `CMD_PRECHARGE || cmd === `CMD_BURST_TERMINATE);
+   
+   initial begin
+    //$monitor("%d", cmd);
+   end
   
-  sequence bank0_xfr;
-    bank_st[0] === `BANK_XFR && sdr_ba === 2'b00 && cmd_xfr;
-  endsequence
+  always@ (posedge sdram_clk) begin
+    //Bank 0 Asserts
+    case (bank_st[0])
+        `BANK_IDLE: begin
+            BANK_IDLE_assert: assert(cmd_idle);
+        end
+        `BANK_PRE: begin
+            BANK_PRE_assert: assert(cmd_nop);
+        end
+        `BANK_ACT: begin
+            BANK_ACT_assert: assert(cmd_act);
+        end
+        `BANK_XFR: begin
+            BANK_XFR_assert: assert(cmd_xfr);
+        end
+        `BANK_DMA_LAST_PRE: begin
+            //ignore??
+        end
+        default: begin
+            //ignore??
+        end        
+    endcase
+    
+    
+  end
   
-  
-  sequence bank1_idle;
-    bank_st[1] === `BANK_IDLE && sdr_ba === 2'b01 && cmd_idle;
-  endsequence
-  
-  sequence bank1_act;
-    bank_st[1] === `BANK_ACT && sdr_ba === 2'b01 && cmd_act;
-  endsequence
-  
-  sequence bank1_xfr;
-    bank_st[1] === `BANK_XFR && sdr_ba === 2'b01 && cmd_xfr;
-  endsequence
-  
-  
-  sequence bank2_idle;
-    bank_st[2] === `BANK_IDLE && sdr_ba === 2'b10 && cmd_idle;
-  endsequence
-  
-  sequence bank2_act;
-    bank_st[2] === `BANK_ACT && sdr_ba === 2'b10 && cmd_act;
-  endsequence
-  
-  sequence bank2_xfr;
-    bank_st[2] === `BANK_XFR && sdr_ba === 2'b10 && cmd_xfr;
-  endsequence
-  
-  
-  sequence bank3_idle;
-    bank_st[3] === `BANK_IDLE && sdr_ba === 2'b11 && cmd_idle;
-  endsequence
-  
-  sequence bank3_act;
-    bank_st[3] === `BANK_ACT && sdr_ba === 2'b11 && cmd_act;
-  endsequence
-  
-  sequence bank3_xfr;
-    bank_st[3] === `BANK_XFR && sdr_ba === 2'b11 && cmd_xfr;
-  endsequence
-
 endinterface
