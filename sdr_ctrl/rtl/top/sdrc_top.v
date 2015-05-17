@@ -168,20 +168,7 @@ wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
               .sdr_dout           (sdr_dout           ) ,
               .sdr_den_n          (sdr_den_n          ) ,
             /* Configuration Bus */
-              .sdr_init_done      (cfg.sdr_init_done      ) ,
-              .sdr_width          (cfg.cfg_sdr_width      ) ,
-              .cfg_colbits        (cfg.cfg_colbits        ) ,
-              .cfg_sdr_en         (cfg.cfg_sdr_en         ) ,
-              .cfg_sdr_mode_reg   (cfg.cfg_sdr_mode_reg   ) ,
-              .cfg_sdr_tras_d     (cfg.cfg_sdr_tras_d     ) ,
-              .cfg_sdr_trp_d      (cfg.cfg_sdr_trp_d      ) ,
-              .cfg_sdr_trcd_d     (cfg.cfg_sdr_trcd_d     ) ,
-              .cfg_sdr_cas        (cfg.cfg_sdr_cas        ) ,
-              .cfg_sdr_trcar_d    (cfg.cfg_sdr_trcar_d    ) ,
-              .cfg_sdr_twr_d      (cfg.cfg_sdr_twr_d      ) ,
-              .cfg_sdr_rfsh       (cfg.cfg_sdr_rfsh       ) ,
-              .cfg_sdr_rfmax      (cfg.cfg_sdr_rfmax      ) , 
-              .cfg_req_depth      (cfg.cfg_req_depth      )
+              .cfg                (cfg                )
 	       );
         
     // update interface's storage of state of each bank
