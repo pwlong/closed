@@ -11,6 +11,7 @@ set sdr_tests =(basic_test1 )
 
 
 echo " Compiling with MODELSIM in $1 $2 Mode "
+mkdir -p ../log
 
 ./compile.modelsim $1 $2 | tee ../log/$1_$2_complie.log
 
@@ -18,7 +19,7 @@ echo " Compiling with MODELSIM in $1 $2 Mode "
 if ($status != 0) then
   echo "#### Compile : FAILED"
   echo ""
-  cat ../log/complie.log
+  cat ../log/$1_$2_complie.log
   exit
 else
   echo "#### Compile : PASSED"
@@ -37,7 +38,7 @@ foreach run_test ($sdr_tests)
 	#echo ""
 	echo "### Running test ${i}: ${run_test}"
 
-        vsim -do run.do -c tb_$1 +${run_test} | tee  ../log/run.log
+        vsim -do run.do -c $1 +${run_test} | tee  ../log/run.log
 	if ($status != 0) then
 	  cat ../log/run.log
 	  exit
