@@ -7,7 +7,9 @@ else
    vlib work
 endif
 if($1 == "core") then # run SDRAM Core level test case
+   echo "COMPILING: vlog -sv -work work +define+$2 -f filelist_core.f"
    vlog -sv -work work +define+$2 -f filelist_core.f
 else # Run SDRAM Top Level test cases
+   echo "COMPILING: vlog -sv -work work +define+$2 -f filelist_top.f"
    vlog -sv -work work +define+$2 -f filelist_top.f
 endif
