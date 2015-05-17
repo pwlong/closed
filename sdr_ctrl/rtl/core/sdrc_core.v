@@ -92,35 +92,35 @@ module sdrc_core #(
     //------------------------------------------------
     // Request from app
     //------------------------------------------------
-    input wire            app_req             , // Application Request
+    input wire                  app_req             , // Application Request
     input wire [APP_AW-1:0]     app_req_addr        , // Address 
-    input wire            app_req_wr_n        , // 0 - Write, 1 - Read
+    input wire                  app_req_wr_n        , // 0 - Write, 1 - Read
     input  wire                 app_req_wrap        , // Address Wrap
     output wire                 app_req_ack         , // Application Request Ack
         
     input wire [APP_DW-1:0]     app_wr_data         , // Write Data
-    output wire                app_wr_next_req     , // Next Write Data Request
+    output wire                 app_wr_next_req     , // Next Write Data Request
     input wire [APP_BW-1:0]     app_wr_en_n         , // Byte wise Write Enable
     output wire                 app_last_wr         , // Last Write trannsfer of a given Burst
-    output wire [APP_DW-1:0]     app_rd_data         , // Read Data
+    output wire [APP_DW-1:0]    app_rd_data         , // Read Data
     output wire                 app_rd_valid        , // Read Valid
     output wire                 app_last_rd         , // Last Read Transfer of a given Burst
-    input wire [APP_RW-1:0]    app_req_len         , // Application Burst Request length in 32 bit 
-    input wire                             app_req_dma_last,    // this signal should close the bank
+    input wire [APP_RW-1:0]     app_req_len         , // Application Burst Request length in 32 bit 
+    input wire                  app_req_dma_last,    // this signal should close the bank
     //------------------------------------------------
     // Interface to SDRAMs
     //------------------------------------------------
     output wire               sdr_cke             , // SDRAM Clock Enable
-    output wire                      sdr_cs_n            , // SDRAM Chip Select
+    output wire               sdr_cs_n            , // SDRAM Chip Select
     output wire               sdr_ras_n           , // SDRAM ras
     output wire               sdr_cas_n           , // SDRAM cas
-    output wire                     sdr_we_n            , // SDRAM write enable
-    output wire [SDR_BW-1:0]     sdr_dqm             , // SDRAM Data Mask
-    output wire [1:0]             sdr_ba              , // SDRAM Bank Enable
-    output wire [12:0]             sdr_addr            , // SDRAM Address
-    input  wire [SDR_DW-1:0]     pad_sdr_din         , // SDRA Data Input
-    output wire [SDR_DW-1:0]     sdr_dout            , // SDRAM Data Output
-    output wire [SDR_BW-1:0]     sdr_den_n           , // SDRAM Data Output enable
+    output wire               sdr_we_n            , // SDRAM write enable
+    output wire [SDR_BW-1:0]  sdr_dqm             , // SDRAM Data Mask
+    output wire [1:0]         sdr_ba              , // SDRAM Bank Enable
+    output wire [12:0]        sdr_addr            , // SDRAM Address
+    input  wire [SDR_DW-1:0]  sdr_din         , // SDRA Data Input
+    output wire [SDR_DW-1:0]  sdr_dout            , // SDRAM Data Output
+    output wire [SDR_BW-1:0]  sdr_den_n           , // SDRAM Data Output enable
     //------------------------------------------------
     // Configuration Parameter
     //------------------------------------------------
@@ -175,7 +175,7 @@ assign sdr_dout  = sdr_dout_int ;
 reg [SDR_DW-1:0] pad_sdr_din1;
 reg [SDR_DW-1:0] pad_sdr_din2;
 always@(posedge pad_clk) begin
-   pad_sdr_din1 <= pad_sdr_din;
+   pad_sdr_din1 <= sdr_din;
 end
 
 always@(posedge clk) begin
