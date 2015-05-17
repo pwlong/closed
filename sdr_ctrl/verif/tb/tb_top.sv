@@ -52,15 +52,17 @@
 
 module tb_top #(
     parameter P_SYS  = 10,     //    200MHz
-    parameter P_SDR  = 20      //    100MHz
+    parameter P_SDR  = 20,     //    100MHz
+    parameter CFG_SDR_WIDTH = 2'b10,
+    parameter CFG_COLBITS   = 2'b00
 )
 (
     output logic sys_clk,
     output logic sdram_clk,
     output logic sdram_clk_d,
     output logic RESETN,
-    input wire sdr_init_done,
-    wishbone_interface.master wbi
+    wishbone_interface.master wbi,
+    cfg_if.master cfg
 );
 
 initial sys_clk = 0;
@@ -78,6 +80,23 @@ assign  #(2.0) sdram_clk_d   = sdram_clk;
 int dfifo[$]; // data fifo
 int afifo[$]; // address  fifo
 int bfifo[$]; // Burst Length fifo
+
+// Initialize Configuration Parameters
+initial begin
+    cfg.cfg_sdr_width    <= CFG_SDR_WIDTH;
+    cfg.cfg_colbits      <= CFG_COLBITS;
+    cfg.cfg_req_depth    <=  2'h3   ;
+    cfg.cfg_sdr_en       <=  1'b1   ;
+    cfg.cfg_sdr_mode_reg <=  13'h033;
+    cfg.cfg_sdr_tras_d   <=  4'h4   ;
+    cfg.cfg_sdr_trp_d    <=  4'h2   ;
+    cfg.cfg_sdr_trcd_d   <=  4'h2   ;
+    cfg.cfg_sdr_cas      <=  3'h3   ;
+    cfg.cfg_sdr_trcar_d  <=  4'h7   ;
+    cfg.cfg_sdr_twr_d    <=  4'h1   ;
+    cfg.cfg_sdr_rfsh     <=  12'h100;
+    cfg.cfg_sdr_rfmax    <=  3'h6   ;
+end
 
 reg [31:0] read_data;
 reg [31:0] ErrCnt;
@@ -105,7 +124,7 @@ initial begin //{
   // Releasing reset
   RESETN    = 1'h1;
   #1000;
-  wait(sdr_init_done === 1);
+  wait(cfg.sdr_init_done === 1);
 
   #1000;
   $display("-------------------------------------- ");

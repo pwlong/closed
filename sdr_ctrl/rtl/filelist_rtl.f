@@ -1,5 +1,6 @@
 ./interfaces/sdr_if.sv
 ./interfaces/wbinterface.sv
+./interfaces/cfg_if.sv
 ./top/sdrc_top.v 
 ./wb2sdrc/wb2sdrc.v 
 ./lib/async_fifo.v  

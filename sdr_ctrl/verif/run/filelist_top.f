@@ -3,6 +3,7 @@
 +incdir+../../rtl/core \
 ../../rtl/interfaces/sdr_if.sv \
 ../../rtl/interfaces/wbinterface.sv \
+../../rtl/interfaces/cfg_if.sv \
 ../tb/tb_top.sv \
 ../model/IS42VM16400K.V \
 ../model/mt48lc2m32b2.v \
