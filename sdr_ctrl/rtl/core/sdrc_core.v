@@ -110,17 +110,7 @@ module sdrc_core #(
     //------------------------------------------------
     // Interface to SDRAMs
     //------------------------------------------------
-    output wire               sdr_cke             , // SDRAM Clock Enable
-    output wire               sdr_cs_n            , // SDRAM Chip Select
-    output wire               sdr_ras_n           , // SDRAM ras
-    output wire               sdr_cas_n           , // SDRAM cas
-    output wire               sdr_we_n            , // SDRAM write enable
-    output wire [SDR_BW-1:0]  sdr_dqm             , // SDRAM Data Mask
-    output wire [1:0]         sdr_ba              , // SDRAM Bank Enable
-    output wire [12:0]        sdr_addr            , // SDRAM Address
-    input  wire [SDR_DW-1:0]  sdr_din         , // SDRA Data Input
-    output wire [SDR_DW-1:0]  sdr_dout            , // SDRAM Data Output
-    output wire [SDR_BW-1:0]  sdr_den_n           , // SDRAM Data Output enable
+    sdr_bus.ctrlcore sdram_bus,
     //------------------------------------------------
     // Configuration Parameter
     //------------------------------------------------
@@ -162,11 +152,11 @@ wire [SDR_DW-1:0]        x2a_rddt;
 
 // synopsys translate_off 
    wire [3:0]           sdr_cmd;
-   assign sdr_cmd = {sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n}; 
+   assign sdr_cmd = {sdram_bus.sdr_cs_n, sdram_bus.sdr_ras_n, sdram_bus.sdr_cas_n, sdram_bus.sdr_we_n}; 
 // synopsys translate_on 
 
-assign sdr_den_n = sdr_den_n_int ; 
-assign sdr_dout  = sdr_dout_int ;
+assign sdram_bus.sdr_den_n = sdr_den_n_int ; 
+assign sdram_bus.sdr_dout  = sdr_dout_int ;
 
 
 // To meet the timing at read path, read data is registered w.r.t pad_sdram_clock and register back to sdram_clk
@@ -175,7 +165,7 @@ assign sdr_dout  = sdr_dout_int ;
 reg [SDR_DW-1:0] pad_sdr_din1;
 reg [SDR_DW-1:0] pad_sdr_din2;
 always@(posedge pad_clk) begin
-   pad_sdr_din1 <= sdr_din;
+   pad_sdr_din1 <= sdram_bus.sdr_din;
 end
 
 always@(posedge clk) begin
@@ -192,7 +182,7 @@ end
 sdrc_req_gen #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_req_gen (
           .clk                (clk          ),
           .reset_n            (reset_n            ),
-      .cfg_colbits        (cfg.cfg_colbits        ),
+          .cfg_colbits        (cfg.cfg_colbits        ),
           .sdr_width          (cfg.cfg_sdr_width          ),
 
     /* Req to xfr_ctl */
@@ -312,14 +302,14 @@ sdrc_xfr_ctl #(.SDR_DW(SDR_DW) ,  .SDR_BW(SDR_BW)) u_xfr_ctl (
           .x2b_wrok           (x2b_wrok           ),
             
        /* SDRAM I/O */
-          .sdr_cs_n           (sdr_cs_n           ),
-          .sdr_cke            (sdr_cke            ),
-          .sdr_ras_n          (sdr_ras_n          ),
-          .sdr_cas_n          (sdr_cas_n          ),
-          .sdr_we_n           (sdr_we_n           ),
-          .sdr_dqm            (sdr_dqm            ),
-          .sdr_ba             (sdr_ba             ),
-          .sdr_addr           (sdr_addr           ),
+          .sdr_cs_n           (sdram_bus.sdr_cs_n           ),
+          .sdr_cke            (sdram_bus.sdr_cke            ),
+          .sdr_ras_n          (sdram_bus.sdr_ras_n          ),
+          .sdr_cas_n          (sdram_bus.sdr_cas_n          ),
+          .sdr_we_n           (sdram_bus.sdr_we_n           ),
+          .sdr_dqm            (sdram_bus.sdr_dqm            ),
+          .sdr_ba             (sdram_bus.sdr_ba             ),
+          .sdr_addr           (sdram_bus.sdr_addr           ),
           .sdr_din            (pad_sdr_din2       ),
           .sdr_dout           (sdr_dout_int       ),
           .sdr_den_n          (sdr_den_n_int      ),

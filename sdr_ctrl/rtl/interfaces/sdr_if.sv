@@ -15,11 +15,15 @@ interface sdr_bus #(
   logic [SDR_BW-1:0]  sdr_dqm;      // SDRAM Data Mask
   logic [1:0]         sdr_ba;       // SDRAM Bank Enable
   logic [12:0] 		  sdr_addr;     // SDRAM Address
-  //logic [SDR_DW-1:0] 	pad_sdr_din;  // SDRAM Data Input
-  //logic [SDR_DW-1:0] 	sdr_dout;     // SDRAM Data Output
-  //logic [SDR_BW-1:0] 	sdr_den_n;    // SDRAM Data Output enable
+  logic [SDR_DW-1:0]  sdr_din;  // SDRAM Data Input
+  logic [SDR_DW-1:0]  sdr_dout;     // SDRAM Data Output
+  logic [SDR_BW-1:0]  sdr_den_n;    // SDRAM Data Output enable
 
-  modport ctrl (
+  // Tristate logic for the din/dout pins on the core
+  assign   sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}};
+  assign   sdr_din = sdr_dq;
+
+  modport ctrltop (
     inout  sdr_dq,
     output sdr_addr,
     output sdr_ba,
@@ -29,6 +33,22 @@ interface sdr_bus #(
     output sdr_cas_n,
     output sdr_we_n,
     output sdr_dqm,
+    input  sdram_clk,
+    input  sdram_resetn
+  );
+
+  modport ctrlcore (
+    output sdr_addr,
+    output sdr_ba,
+    output sdr_cke,
+    output sdr_cs_n,
+    output sdr_ras_n,
+    output sdr_cas_n,
+    output sdr_we_n,
+    output sdr_dqm,
+    output sdr_dout,
+    output sdr_den_n,
+    input  sdr_din,
     input  sdram_clk,
     input  sdram_resetn
   );

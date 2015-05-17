@@ -94,82 +94,61 @@ wire                  app_rd_valid       ; // sdr read valid
 wire                  app_last_rd        ; // Indicate last Read of Burst Transfer
 wire                  app_last_wr        ; // Indicate last Write of Burst Transfer
 wire [dw-1:0]         app_wr_data        ; // sdr write data
-wire  [dw-1:0]        app_rd_data        ; // sdr read data
-
-/****************************************
-*  These logic has to be implemented using Pads
-*  **************************************/
-wire  [SDR_DW-1:0]    sdr_din             ; // SDRA Data Input
-wire  [SDR_DW-1:0]    sdr_dout            ; // SDRAM Data Output
-wire  [SDR_BW-1:0]    sdr_den_n           ; // SDRAM Data Output enable
-
-
-assign   sdram_bus.sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}}; 
-assign   sdr_din = sdram_bus.sdr_dq;
+wire [dw-1:0]         app_rd_data        ; // sdr read data
 
 // sdram pad clock is routed back through pad
 // SDRAM Clock from Pad, used for registering Read Data
 wire #(1.0) sdram_pad_clk = sdram_bus.sdram_clk;
 
 /************** Ends Here **************************/
-wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
-      // WB bus
-      .wbi(wbi),
+    wb2sdrc #(.dw(dw),.tw(tw),.bl(bl)) u_wb2sdrc (
+        // WB bus
+        .wbi(wbi),
 
-      //SDRAM Controller Hand-Shake Signal 
-          .sdram_clk          (sdram_bus.sdram_clk          ) ,
-          .sdram_resetn       (sdram_bus.sdram_resetn       ) ,
-          .sdr_req            (app_req            ) ,
-          .sdr_req_addr       (app_req_addr       ) ,
-          .sdr_req_len        (app_req_len        ) ,
-          .sdr_req_wr_n       (app_req_wr_n       ) ,
-          .sdr_req_ack        (app_req_ack        ) ,
-          .sdr_busy_n         (app_busy_n         ) ,
-          .sdr_wr_en_n        (app_wr_en_n        ) ,
-          .sdr_wr_next        (app_wr_next_req    ) ,
-          .sdr_rd_valid       (app_rd_valid       ) ,
-          .sdr_last_rd        (app_last_rd        ) ,
-          .sdr_wr_data        (app_wr_data        ) ,
-          .sdr_rd_data        (app_rd_data        ) 
-      ); 
+        //SDRAM Controller Hand-Shake Signal 
+        .sdram_clk          (sdram_bus.sdram_clk          ) ,
+        .sdram_resetn       (sdram_bus.sdram_resetn       ) ,
+        .sdr_req            (app_req            ) ,
+        .sdr_req_addr       (app_req_addr       ) ,
+        .sdr_req_len        (app_req_len        ) ,
+        .sdr_req_wr_n       (app_req_wr_n       ) ,
+        .sdr_req_ack        (app_req_ack        ) ,
+        .sdr_busy_n         (app_busy_n         ) ,
+        .sdr_wr_en_n        (app_wr_en_n        ) ,
+        .sdr_wr_next        (app_wr_next_req    ) ,
+        .sdr_rd_valid       (app_rd_valid       ) ,
+        .sdr_last_rd        (app_last_rd        ) ,
+        .sdr_wr_data        (app_wr_data        ) ,
+        .sdr_rd_data        (app_rd_data        ) 
+    ); 
 
     sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_sdrc_core (
-              .clk                (sdram_bus.sdram_clk    ) ,
-              .pad_clk            (sdram_pad_clk          ) ,
-              .reset_n            (sdram_bus.sdram_resetn ) ,
+        .clk                (sdram_bus.sdram_clk    ) ,
+        .pad_clk            (sdram_pad_clk          ) ,
+        .reset_n            (sdram_bus.sdram_resetn ) ,
     
-     		/* Request from app */
-              .app_req            (app_req            ) ,// Transfer Request
-              .app_req_addr       (app_req_addr       ) ,// SDRAM Address
-              .app_req_len        (app_req_len        ) ,// Burst Length (in 16 bit words)
-              .app_req_wrap       (1'b0               ) ,// Wrap mode request 
-              .app_req_wr_n       (app_req_wr_n       ) ,// 0 => Write request, 1 => read req
-              .app_req_ack        (app_req_ack        ) ,// Request has been accepted
+		/* Request from app */
+        .app_req            (app_req            ) ,// Transfer Request
+        .app_req_addr       (app_req_addr       ) ,// SDRAM Address
+        .app_req_len        (app_req_len        ) ,// Burst Length (in 16 bit words)
+        .app_req_wrap       (1'b0               ) ,// Wrap mode request 
+        .app_req_wr_n       (app_req_wr_n       ) ,// 0 => Write request, 1 => read req
+        .app_req_ack        (app_req_ack        ) ,// Request has been accepted
      		
-              .app_wr_data        (app_wr_data        ) ,
-              .app_wr_en_n        (app_wr_en_n        ) ,
-              .app_rd_data        (app_rd_data        ) ,
-              .app_rd_valid       (app_rd_valid       ) ,
-              .app_last_rd        (app_last_rd        ) ,
-              .app_last_wr        (app_last_wr        ) ,
-              .app_wr_next_req    (app_wr_next_req    ) ,
-              .app_req_dma_last   (app_req            ) ,
+        .app_wr_data        (app_wr_data        ) ,
+        .app_wr_en_n        (app_wr_en_n        ) ,
+        .app_rd_data        (app_rd_data        ) ,
+        .app_rd_valid       (app_rd_valid       ) ,
+        .app_last_rd        (app_last_rd        ) ,
+        .app_last_wr        (app_last_wr        ) ,
+        .app_wr_next_req    (app_wr_next_req    ) ,
+        .app_req_dma_last   (app_req            ) ,
  
-     		/* Interface to SDRAMs */
-              .sdr_cs_n           (sdram_bus.sdr_cs_n ) ,
-              .sdr_cke            (sdram_bus.sdr_cke  ) ,
-              .sdr_ras_n          (sdram_bus.sdr_ras_n) ,
-              .sdr_cas_n          (sdram_bus.sdr_cas_n) ,
-              .sdr_we_n           (sdram_bus.sdr_we_n ) ,
-              .sdr_dqm            (sdram_bus.sdr_dqm  ) ,
-              .sdr_ba             (sdram_bus.sdr_ba   ) ,
-              .sdr_addr           (sdram_bus.sdr_addr ) , 
-              .sdr_din            (sdr_din            ) ,
-              .sdr_dout           (sdr_dout           ) ,
-              .sdr_den_n          (sdr_den_n          ) ,
-            /* Configuration Bus */
-              .cfg                (cfg                )
-	       );
+ 		/* Interface to SDRAMs */
+        .sdram_bus(sdram_bus),
+        /* Configuration Bus */
+        .cfg                (cfg                )
+    );
         
     // update interface's storage of state of each bank
     assign sdram_bus.bank_st[0] = u_sdrc_core.u_bank_ctl.bank0_fsm.bank_st;
