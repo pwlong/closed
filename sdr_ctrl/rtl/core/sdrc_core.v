@@ -74,146 +74,75 @@ later version.
 
 
 `include "sdrc_define.v"
-module sdrc_core 
-           (
-        clk,
-                pad_clk,
-        reset_n,
-                sdr_width,
-        cfg_colbits,
-
-        /* Request from app */
-        app_req,            // Transfer Request
-        app_req_addr,            // SDRAM Address
-        app_req_len,            // Burst Length (in 16 bit words)
-        app_req_wrap,            // Wrap mode request (xfr_len = 4)
-        app_req_wr_n,            // 0 => Write request, 1 => read req
-        app_req_ack,            // Request has been accepted
-        cfg_req_depth,            //how many req. buffer should hold
-        
-        app_wr_data,
-                app_wr_en_n,
-        app_last_wr,
-
-        app_rd_data,
-        app_rd_valid,
-        app_last_rd,
-        app_wr_next_req,
-        sdr_init_done,
-        app_req_dma_last,
-
-        /* Interface to SDRAMs */
-        sdr_cs_n,
-        sdr_cke,
-        sdr_ras_n,
-        sdr_cas_n,
-        sdr_we_n,
-        sdr_dqm,
-        sdr_ba,
-        sdr_addr, 
-        pad_sdr_din,
-        sdr_dout,
-        sdr_den_n,
-
-        /* Parameters */
-        cfg_sdr_en,
-        cfg_sdr_mode_reg,
-        cfg_sdr_tras_d,
-        cfg_sdr_trp_d,
-        cfg_sdr_trcd_d,
-        cfg_sdr_cas,
-        cfg_sdr_trcar_d,
-        cfg_sdr_twr_d,
-        cfg_sdr_rfsh,
-        cfg_sdr_rfmax);
-  
-parameter  APP_AW   = 26;  // Application Address Width
-parameter  APP_DW   = 32;  // Application Data Width 
-parameter  APP_BW   = 4;   // Application Byte Width
-parameter  APP_RW   = 9;   // Application Request Width
-
-parameter  SDR_DW   = 16;  // SDR Data Width 
-parameter  SDR_BW   = 2;   // SDR Byte Width
-             
-
+module sdrc_core #(
+    parameter  APP_AW   = 26,  // Application Address Width
+    parameter  APP_DW   = 32,  // Application Data Width 
+    parameter  APP_BW   = 4,   // Application Byte Width
+    parameter  APP_RW   = 9,   // Application Request Width
+    parameter  SDR_DW   = 16,  // SDR Data Width 
+    parameter  SDR_BW   = 2    // SDR Byte Width
+)
+(
 //-----------------------------------------------
 // Global Variable
 // ----------------------------------------------
-input                   clk                 ; // SDRAM Clock 
-input                   pad_clk             ; // SDRAM Clock from Pad, used for registering Read Data
-input                   reset_n             ; // Reset Signal
-input [1:0]             sdr_width           ; // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
-input [1:0]             cfg_colbits         ; // 2'b00 - 8 Bit column address, 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
-
-
+input wire                  clk                 , // SDRAM Clock 
+input wire                  pad_clk             , // SDRAM Clock from Pad, used for registering Read Data
+input wire                  reset_n             , // Reset Signal
+input wire [1:0]             sdr_width           , // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
+input wire [1:0]             cfg_colbits         , // 2'b00 - 8 Bit column address, 2'b01 - 9 Bit, 10 - 10 bit, 11 - 11Bits
 //------------------------------------------------
 // Request from app
 //------------------------------------------------
-input             app_req             ; // Application Request
-input [APP_AW-1:0]     app_req_addr        ; // Address 
-input             app_req_wr_n        ; // 0 - Write, 1 - Read
-input                   app_req_wrap        ; // Address Wrap
-output                  app_req_ack         ; // Application Request Ack
+input wire            app_req             , // Application Request
+input wire [APP_AW-1:0]     app_req_addr        , // Address 
+input wire            app_req_wr_n        , // 0 - Write, 1 - Read
+input  wire                 app_req_wrap        , // Address Wrap
+output wire                 app_req_ack         , // Application Request Ack
         
-input [APP_DW-1:0]     app_wr_data         ; // Write Data
-output                 app_wr_next_req     ; // Next Write Data Request
-input [APP_BW-1:0]     app_wr_en_n         ; // Byte wise Write Enable
-output                  app_last_wr         ; // Last Write trannsfer of a given Burst
-output [APP_DW-1:0]     app_rd_data         ; // Read Data
-output                  app_rd_valid        ; // Read Valid
-output                  app_last_rd         ; // Last Read Transfer of a given Burst
-        
-    
-    
-    
-    
-    
-    
+input wire [APP_DW-1:0]     app_wr_data         , // Write Data
+output wire                app_wr_next_req     , // Next Write Data Request
+input wire [APP_BW-1:0]     app_wr_en_n         , // Byte wise Write Enable
+output wire                 app_last_wr         , // Last Write trannsfer of a given Burst
+output wire [APP_DW-1:0]     app_rd_data         , // Read Data
+output wire                 app_rd_valid        , // Read Valid
+output wire                 app_last_rd         , // Last Read Transfer of a given Burst
 //------------------------------------------------
 // Interface to SDRAMs PWL LOOKIE HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 //------------------------------------------------
-output                sdr_cke             ; // SDRAM Clock Enable
-output                       sdr_cs_n            ; // SDRAM Chip Select
-output                sdr_ras_n           ; // SDRAM ras
-output                sdr_cas_n           ; // SDRAM cas
-output                      sdr_we_n            ; // SDRAM write enable
-output  [SDR_BW-1:0]     sdr_dqm             ; // SDRAM Data Mask
-output  [1:0]             sdr_ba              ; // SDRAM Bank Enable
-output  [12:0]             sdr_addr            ; // SDRAM Address
-input   [SDR_DW-1:0]     pad_sdr_din         ; // SDRA Data Input
-output  [SDR_DW-1:0]     sdr_dout            ; // SDRAM Data Output
-output  [SDR_BW-1:0]     sdr_den_n           ; // SDRAM Data Output enable
-
-
-
-
-
-
-
-
-
-
+output wire               sdr_cke             , // SDRAM Clock Enable
+output wire                      sdr_cs_n            , // SDRAM Chip Select
+output wire               sdr_ras_n           , // SDRAM ras
+output wire               sdr_cas_n           , // SDRAM cas
+output wire                     sdr_we_n            , // SDRAM write enable
+output wire [SDR_BW-1:0]     sdr_dqm             , // SDRAM Data Mask
+output wire [1:0]             sdr_ba              , // SDRAM Bank Enable
+output wire [12:0]             sdr_addr            , // SDRAM Address
+input  wire [SDR_DW-1:0]     pad_sdr_din         , // SDRA Data Input
+output wire [SDR_DW-1:0]     sdr_dout            , // SDRAM Data Output
+output wire [SDR_BW-1:0]     sdr_den_n           , // SDRAM Data Output enable
 //------------------------------------------------
 // Configuration Parameter
 //------------------------------------------------
-output                  sdr_init_done       ; // Indicate SDRAM Initialisation Done
-input [3:0]         cfg_sdr_tras_d      ; // Active to precharge delay
-input [3:0]             cfg_sdr_trp_d       ; // Precharge to active delay
-input [3:0]             cfg_sdr_trcd_d      ; // Active to R/W delay
-input             cfg_sdr_en          ; // Enable SDRAM controller
-input [1:0]         cfg_req_depth       ; // Maximum Request accepted by SDRAM controller
-input [APP_RW-1:0]    app_req_len         ; // Application Burst Request length in 32 bit 
-input [12:0]         cfg_sdr_mode_reg    ;
-input [2:0]         cfg_sdr_cas         ; // SDRAM CAS Latency
-input [3:0]         cfg_sdr_trcar_d     ; // Auto-refresh period
-input [3:0]             cfg_sdr_twr_d       ; // Write recovery delay
-input [`SDR_RFSH_TIMER_W-1 : 0] cfg_sdr_rfsh;
-input [`SDR_RFSH_ROW_CNT_W -1 : 0] cfg_sdr_rfmax;
-input                   app_req_dma_last;    // this signal should close the bank
+output wire                 sdr_init_done       , // Indicate SDRAM Initialisation Done
+input wire [3:0]         cfg_sdr_tras_d      , // Active to precharge delay
+input wire [3:0]             cfg_sdr_trp_d       , // Precharge to active delay
+input wire [3:0]             cfg_sdr_trcd_d      , // Active to R/W delay
+input wire            cfg_sdr_en          , // Enable SDRAM controller
+input wire [1:0]         cfg_req_depth       , // Maximum Request accepted by SDRAM controller
+input wire [APP_RW-1:0]    app_req_len         , // Application Burst Request length in 32 bit 
+input wire [12:0]         cfg_sdr_mode_reg    ,
+input wire [2:0]         cfg_sdr_cas         , // SDRAM CAS Latency
+input wire [3:0]         cfg_sdr_trcar_d     , // Auto-refresh period
+input wire [3:0]             cfg_sdr_twr_d       , // Write recovery delay
+input wire [`SDR_RFSH_TIMER_W-1 : 0] cfg_sdr_rfsh,
+input wire [`SDR_RFSH_ROW_CNT_W -1 : 0] cfg_sdr_rfmax,
+input wire                  app_req_dma_last     // this signal should close the bank
+);
 
+   
 /****************************************************************************/
 // Internal Nets
-   
 // SDR_REQ_GEN
 wire [`SDR_REQ_ID_W-1:0]r2b_req_id;
 wire [1:0]         r2b_ba;
@@ -231,24 +160,13 @@ wire [1:0]         b2x_cmd;
 // SDR_XFR_CTL
 wire [3:0]         x2b_pre_ok;
 wire [`SDR_REQ_ID_W-1:0]xfr_id;
-wire [APP_DW-1:0]     app_rd_data;
-wire             sdr_cs_n, sdr_cke, sdr_ras_n, sdr_cas_n, sdr_we_n; 
-wire [SDR_BW-1:0]     sdr_dqm;
-wire [1:0]         sdr_ba;
-wire [12:0]         sdr_addr;
-wire [SDR_DW-1:0]     sdr_dout;
 wire [SDR_DW-1:0]     sdr_dout_int;
-wire [SDR_BW-1:0]     sdr_den_n;
 wire [SDR_BW-1:0]     sdr_den_n_int;
 
 wire [1:0]         xfr_bank_sel;
 
-wire [APP_AW-1:0]        app_req_addr;
-wire [APP_RW-1:0]        app_req_len;
 
-wire [APP_DW-1:0]        app_wr_data;
 wire [SDR_DW-1:0]        a2x_wrdt       ;
-wire [APP_BW-1:0]        app_wr_en_n;
 wire [SDR_BW-1:0]        a2x_wren_n;
 
 //wire [31:0] app_rd_data;
