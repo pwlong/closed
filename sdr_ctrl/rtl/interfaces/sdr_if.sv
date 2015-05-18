@@ -67,11 +67,13 @@ interface sdr_bus #(
     input sdram_resetn
   );
 // states from sdrc_bank_fsm.v - TODO: define these in a SINGLE place
-  `define BANK_IDLE         3'b000
-  `define BANK_PRE          3'b001
-  `define BANK_ACT          3'b010
-  `define BANK_XFR          3'b011
-  `define BANK_DMA_LAST_PRE 3'b100
+  typedef enum bit [3:0] {
+    BANK_IDLE,
+    BANK_PRE,
+    BANK_ACT,
+    BANK_XFR,
+    BANK_DMA_LAST_PRE
+  } bankState_t;
   
   // commands in table 14, page 25 of dram datasheet
   typedef enum bit [3:0] {
@@ -94,7 +96,7 @@ interface sdr_bus #(
   } cmd_t;
   
   // store the state of each bank
-  wire [3:0] [2:0] bank_st;
+  bankState_t [3:0] bank_st;
   
   //Current Command
   cmd_t cmd;
@@ -116,48 +118,29 @@ interface sdr_bus #(
   
   always@ (posedge sdram_clk) begin
     //Bank 0 Asserts
-    case (bank_st[0])
-        `BANK_IDLE: begin
-            $display("Bank is IDLE");
-            BANK_IDLE_assert: assert(cmd_idle) begin
-                $display("BANK_IDLE PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_idle);
-            end else begin
-                $display("BANK_IDLE FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_idle);
+    if (sdr_ba === 2'b00) begin
+        case (bank_st[0])
+            BANK_IDLE: doCommandAssert(bank_st[0],cmd_idle);
+            BANK_PRE: doCommandAssert(bank_st[0],cmd_nop);
+            BANK_ACT: doCommandAssert(bank_st[0],cmd_act);
+            BANK_XFR: doCommandAssert(bank_st[0],cmd_xfr);
+            BANK_DMA_LAST_PRE: begin
+                //ignore??
             end
-        end
-        `BANK_PRE: begin
-            $display("Bank is PRECHARGED");
-            BANK_PRE_assert: assert(cmd_nop) begin
-                $display("BANK_PRE PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_nop);
-            end else begin
-                $display("BANK_PRE FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_nop);
-            end
-        end
-        `BANK_ACT: begin
-            $display("Bank is ACTIVATED");
-            BANK_ACT_assert: assert(cmd_act) begin
-                $display("BANK_ACT_assert PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_act);
-            end else begin
-                $display("BANK_ACT_assert FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_act);
-            end
-        end
-        `BANK_XFR: begin
-            $display("Bank is XFER");
-            BANK_XFR_assert: assert(cmd_xfr) begin
-                $display("BANK_XFR_assert PASS: COMMAND: %p, CMDVAR: %b", cmd, cmd_xfr);
-            end else begin
-                $display("BANK_XFR_assert FAILURE: COMMAND: %p, CMDVAR: %b", cmd, cmd_xfr);
-            end
-        end
-        `BANK_DMA_LAST_PRE: begin
-            //ignore??
-        end
-        default: begin
-            //ignore??
-        end        
-    endcase
-    
-    
+            default: begin
+                //ignore??
+            end        
+        endcase
+    end
   end
+
+  task doCommandAssert(bankState_t bankState, bit [3:0] cmdIsLegal);
+    begin
+        assert(cmdIsLegal)
+            $display("COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bankState, cmd);
+        else
+            $display("COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bankState, cmd);
+    end
+  endtask
   
 endinterface
