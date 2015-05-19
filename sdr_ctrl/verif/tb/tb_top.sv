@@ -306,7 +306,7 @@ begin
   bfifo.push_back(bl);
 
    @ (negedge sys_clk);
-   $display("Write Address: %x, Burst Size: %d",Address,bl);
+   $display("tb_top:  Write Address: %x, Burst Size: %d",Address,bl);
 
    for(i=0; i < bl; i++) begin
       wbi.wb_stb_i        = 1;
@@ -322,7 +322,7 @@ begin
       end while(wbi.wb_ack_o == 1'b0);
           @ (negedge sys_clk);
    
-       $display("Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,wbi.wb_addr_i,wbi.wb_dat_i);
+       $display("tb_top:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,wbi.wb_addr_i,wbi.wb_dat_i);
    end
    wbi.wb_stb_i        = 0;
    wbi.wb_cyc_i        = 0;
@@ -344,7 +344,8 @@ begin
    Address = afifo.pop_front(); 
    bl      = bfifo.pop_front(); 
    @ (negedge sys_clk);
-
+   
+      $display("tb_top:  Read Address: %x, Burst Size: %d",Address,bl);
       for(j=0; j < bl; j++) begin
          wbi.wb_stb_i        = 1;
          wbi.wb_cyc_i        = 1;
@@ -356,10 +357,10 @@ begin
              @ (posedge sys_clk);
          end while(wbi.wb_ack_o == 1'b0);
          if(wbi.wb_dat_o !== exp_data) begin
-             $display("READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o,exp_data);
+             $display("tb_top:  READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o,exp_data);
              ErrCnt = ErrCnt+1;
          end else begin
-             $display("READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o);
+             $display("tb_top:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o);
          end 
          @ (negedge sdram_clk);
       end

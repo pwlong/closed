@@ -109,9 +109,9 @@ interface sdr_bus #(
   task doCommandAssert(bankState_t bankState, bit cmdIsLegal);
     begin
         assert(cmdIsLegal)
-            $display("COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bankState, cmd);
+            $display("sdrc_if: COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bankState, cmd);
         else
-            $display("COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bankState, cmd);
+            $display("sdrc_if: COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bankState, cmd);
     end
   endtask
   
@@ -199,7 +199,7 @@ interface sdr_bus #(
     //Bank 0 Asserts
     if (sdr_ba === 2'b00) begin
         case (bank0State)
-            INITIALIZING:$display("Init State");
+            INITIALIZING:$display("sdrc_if: Init State");
             IDLE:        doCommandAssert(bank0State, cmd_idle);
             REFRESHING:  doCommandAssert(bank0State, cmd_nop);
             ACTIVATING:  doCommandAssert(bank0State, cmd_nop);
