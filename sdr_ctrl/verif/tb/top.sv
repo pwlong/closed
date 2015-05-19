@@ -24,9 +24,9 @@ module top;
 
     // INTERFACE DECLARATIONS
     wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
-    sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN);
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
              .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W)) cfg();
+    sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN,cfg.sdr_init_done);
 
     // TESTBENCH
     tb_top #(

@@ -4,7 +4,8 @@ interface sdr_bus #(
   )(
   input logic sdram_clk,                 // SDRAM Clock
   input logic sdram_clk_d,               // Delayed clock
-  input logic sdram_resetn
+  input logic sdram_resetn,
+  input logic sdr_init_done
 );
   logic               sdr_cke;      // SDRAM Clock
   logic               sdr_cs_n;     // SDRAM Chip Select
@@ -66,15 +67,11 @@ interface sdr_bus #(
     input sdram_clk_d,
     input sdram_resetn
   );
-// states from sdrc_bank_fsm.v - TODO: define these in a SINGLE place
-  typedef enum bit [3:0] {
-    BANK_IDLE,
-    BANK_PRE,
-    BANK_ACT,
-    BANK_XFR,
-    BANK_DMA_LAST_PRE
-  } bankState_t;
   
+  typedef enum logic [3:0] {
+   INITIALIZING, IDLE, REFRESHING, ACTIVATING, ACTIVE, RD, RD_W_PC, WR, WR_W_PC, PRECHARGING
+  } bankState_t;
+
   // commands in table 14, page 25 of dram datasheet
   typedef enum bit [3:0] {
     CMD_LOAD_MODE_REGISTER = 4'b0000,
@@ -95,9 +92,6 @@ interface sdr_bus #(
     CMD_NOP_VIII           = 4'b1111
   } cmd_t;
   
-  // store the state of each bank
-  bankState_t [3:0] bank_st;
-  
   //Current Command
   cmd_t cmd;
   assign cmd  = cmd_t'({sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n});
@@ -108,33 +102,11 @@ interface sdr_bus #(
   bit cmd_act;
   bit cmd_xfr;
   assign cmd_nop   = (cmd[3] === 1'b1 | cmd === CMD_NOP);
-  assign cmd_idle  = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_ACTIVE | cmd === CMD_AUTO_REFRESH | cmd === CMD_LOAD_MODE_REGISTER | cmd === CMD_PRECHARGE);
-  assign cmd_act   = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
-  assign cmd_xfr   = (cmd[3] === 1'b1 | cmd === CMD_NOP | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE | cmd === CMD_BURST_TERMINATE);
-   
-   initial begin
-    //$monitor("%d", cmd);
-   end
-  
-  always@ (posedge sdram_clk) begin
-    //Bank 0 Asserts
-    if (sdr_ba === 2'b00) begin
-        case (bank_st[0])
-            BANK_IDLE: doCommandAssert(bank_st[0],cmd_idle);
-            BANK_PRE: doCommandAssert(bank_st[0],cmd_nop);
-            BANK_ACT: doCommandAssert(bank_st[0],cmd_act);
-            BANK_XFR: doCommandAssert(bank_st[0],cmd_xfr);
-            BANK_DMA_LAST_PRE: begin
-                //ignore??
-            end
-            default: begin
-                //ignore??
-            end        
-        endcase
-    end
-  end
+  assign cmd_idle  = (cmd_nop | cmd === CMD_ACTIVE | cmd === CMD_AUTO_REFRESH | cmd === CMD_LOAD_MODE_REGISTER | cmd === CMD_PRECHARGE);
+  assign cmd_act   = (cmd_nop | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
+  assign cmd_xfr   = (cmd_act | cmd === CMD_BURST_TERMINATE);
 
-  task doCommandAssert(bankState_t bankState, bit [3:0] cmdIsLegal);
+  task doCommandAssert(bankState_t bankState, bit cmdIsLegal);
     begin
         assert(cmdIsLegal)
             $display("COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bankState, cmd);
@@ -143,4 +115,102 @@ interface sdr_bus #(
     end
   endtask
   
+
+  bankState_t bank0State, bank0NextState;
+
+  // Bank 0 FSM Sequential Logic
+  always_ff @(posedge sdram_clk) begin
+    if (~sdram_resetn)
+        bank0State <= INITIALIZING;
+    else
+        bank0State <= bank0NextState;
+  end
+
+  // Next State Combinational Logic
+  always_comb begin
+    case(bank0State)
+        INITIALIZING :  begin
+                            if(sdr_init_done)
+                                bank0NextState = IDLE;
+                            else
+                                bank0NextState = INITIALIZING;
+                        end
+        IDLE         :  begin
+                            if((cmd === CMD_ACTIVE) & (sdr_ba === 2'b00))
+                                bank0NextState = ACTIVATING;
+                            else if ((cmd === CMD_AUTO_REFRESH) & (sdr_ba === 2'b00))
+                                bank0NextState = REFRESHING;
+                            else
+                                bank0NextState = IDLE;
+                        end
+        REFRESHING   :  begin
+                            bank0NextState = IDLE;
+                        end
+        ACTIVATING   :  begin
+                            bank0NextState = ACTIVE;
+                        end
+        ACTIVE       :  begin
+                            if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
+                                bank0NextState = WR;
+                            else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
+                                bank0NextState = RD;
+                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
+                                bank0NextState = PRECHARGING;
+                            else
+                                bank0NextState = ACTIVE;
+                        end
+        RD           :  begin
+                            if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
+                                bank0NextState = WR;
+                            else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
+                                bank0NextState = RD;
+                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
+                                bank0NextState = PRECHARGING;
+                            else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
+                                bank0NextState = ACTIVE;
+                            else
+                                bank0NextState = ACTIVE;
+                        end
+        RD_W_PC      :  begin
+                           bank0NextState = PRECHARGING;
+                        end
+        WR           :  begin
+                            if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
+                                bank0NextState = WR;
+                            else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
+                                bank0NextState = RD;
+                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
+                                bank0NextState = PRECHARGING;
+                            else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
+                                bank0NextState = ACTIVE;
+                            else
+                                bank0NextState = ACTIVE;
+                        end
+        WR_W_PC      :  begin
+                            bank0NextState = PRECHARGING;
+                        end
+        PRECHARGING  :  begin
+                            bank0NextState = IDLE;
+                        end
+    endcase
+  end
+
+  always@ (posedge sdram_clk) begin
+    //Bank 0 Asserts
+    if (sdr_ba === 2'b00) begin
+        case (bank0State)
+            INITIALIZING:$display("Init State");
+            IDLE:        doCommandAssert(bank0State, cmd_idle);
+            REFRESHING:  doCommandAssert(bank0State, cmd_nop);
+            ACTIVATING:  doCommandAssert(bank0State, cmd_nop);
+            ACTIVE:      doCommandAssert(bank0State, cmd_act);
+            RD:          doCommandAssert(bank0State, cmd_xfr);
+            WR:          doCommandAssert(bank0State, cmd_xfr);
+            RD_W_PC:     doCommandAssert(bank0State, cmd_nop);
+            WR_W_PC:     doCommandAssert(bank0State, cmd_nop);
+            PRECHARGING: doCommandAssert(bank0State, cmd_nop);
+        endcase
+    end
+  end
+
 endinterface

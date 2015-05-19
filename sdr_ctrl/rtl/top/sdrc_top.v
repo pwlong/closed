@@ -150,10 +150,4 @@ wire #(1.0) sdram_pad_clk = sdram_bus.sdram_clk;
         .cfg                (cfg                )
     );
         
-    // update interface's storage of state of each bank
-    assign sdram_bus.bank_st[0] = u_sdrc_core.u_bank_ctl.bank0_fsm.bank_st;
-    assign sdram_bus.bank_st[1] = u_sdrc_core.u_bank_ctl.bank1_fsm.bank_st;
-    assign sdram_bus.bank_st[2] = u_sdrc_core.u_bank_ctl.bank2_fsm.bank_st;
-    assign sdram_bus.bank_st[3] = u_sdrc_core.u_bank_ctl.bank3_fsm.bank_st;
-   
 endmodule // sdrc_core
