@@ -263,8 +263,8 @@ interface sdr_bus #(
     end
   end
 
+  // Validates commands are legal for each bank in each state
   always@ (posedge sdram_clk) begin
-    //Bank 0 Asserts
     for(int i = 0; i < 4; i++) begin
         if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE)) begin
             case (bankState[i])
