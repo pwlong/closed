@@ -206,7 +206,7 @@ interface sdr_bus #(
                                         bankNextState[i] = RD_W_PC;
                                     else
                                         bankNextState[i] = RD;
-                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i))
+                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = PRECHARGING;
                                 else
                                     bankNextState[i] = ACTIVE;
@@ -263,8 +263,8 @@ interface sdr_bus #(
     end
   end
 
+  // Validates commands are legal for each bank in each state
   always@ (posedge sdram_clk) begin
-    //Bank 0 Asserts
     for(int i = 0; i < 4; i++) begin
         if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE)) begin
             case (bankState[i])
