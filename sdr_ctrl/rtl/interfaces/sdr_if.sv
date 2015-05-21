@@ -95,6 +95,9 @@ interface sdr_bus #(
   //Current Command
   cmd_t cmd;
   assign cmd  = cmd_t'({sdr_cs_n, sdr_ras_n, sdr_cas_n, sdr_we_n});
+
+  logic aux_cmd;
+  assign aux_cmd  = sdr_addr[10];
   
   //Acceptable Commands
   bit cmd_nop;
@@ -151,9 +154,15 @@ interface sdr_bus #(
                         end
         ACTIVE       :  begin
                             if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
-                                bank0NextState = WR;
+                                if (aux_cmd)
+                                    bank0NextState = WR_W_PC;
+                                else
+                                    bank0NextState = WR;
                             else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
-                                bank0NextState = RD;
+                                if (aux_cmd)
+                                    bank0NextState = RD_W_PC;
+                                else
+                                    bank0NextState = RD;
                             else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
                                 bank0NextState = PRECHARGING;
                             else
@@ -164,7 +173,7 @@ interface sdr_bus #(
                                 bank0NextState = WR;
                             else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
                                 bank0NextState = RD;
-                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
+                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00 | aux_cmd))
                                 bank0NextState = PRECHARGING;
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
@@ -179,7 +188,7 @@ interface sdr_bus #(
                                 bank0NextState = WR;
                             else if((cmd === CMD_READ)      & (sdr_ba === 2'b00))
                                 bank0NextState = RD;
-                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00))
+                            else if((cmd === CMD_PRECHARGE) & (sdr_ba === 2'b00 | aux_cmd))
                                 bank0NextState = PRECHARGING;
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
