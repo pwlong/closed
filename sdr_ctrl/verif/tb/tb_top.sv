@@ -90,24 +90,6 @@ int bfifo[$]; // Burst Length fifo
 
 // Initialize Configuration Parameters
 initial begin
-    //cfg.cfg_sdr_width    <= CFG_SDR_WIDTH;
-    //cfg.cfg_colbits      <= CFG_COLBITS  ;
-    //cfg.cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length
-    //cfg.cfg_sdr_mode_reg[3]     <= 0 ;         // Burst Type
-    //cfg.cfg_sdr_mode_reg[6:4]   <= TCAS;       // CAS Delay
-    //cfg.cfg_sdr_mode_reg[8:7]   <= 0 ;         // OP Mode
-    //cfg.cfg_sdr_mode_reg[9]     <= 0 ;         // Write Burst mode
-    //cfg.cfg_sdr_mode_reg[12:10] <= 0 ;         // Reserved
-    //cfg.cfg_sdr_tras_d   <=  TRAS_D  ;
-    //cfg.cfg_sdr_trp_d    <=  TRP_D   ;
-    //cfg.cfg_sdr_trcd_d   <=  TRCD_D  ;
-    //cfg.cfg_sdr_cas      <=  TCAS    ;
-    //cfg.cfg_sdr_trcar_d  <=  TRCAR_D ;
-    //cfg.cfg_sdr_twr_d    <=  TWR     ;
-    //cfg.cfg_sdr_rfsh     <=  12'h100 ;
-    //cfg.cfg_sdr_rfmax    <=  3'h6    ;
-    //cfg.cfg_req_depth    <=  2'h3    ;
-    //cfg.cfg_sdr_en       <=  1'b1    ;
     cfg.setup();
 end
 
@@ -311,77 +293,44 @@ initial begin //{
 end
 
 task burst_write;
-input [31:0] Address;
-input [7:0]  bl;
-int i;
-begin
-  afifo.push_back(Address);
-  bfifo.push_back(bl);
-
-   @ (negedge sys_clk);
-   $display("tb_top:  Write Address: %x, Burst Size: %d",Address,bl);
-
-   for(i=0; i < bl; i++) begin
-      wbi.wb_stb_i        = 1;
-      wbi.wb_cyc_i        = 1;
-      wbi.wb_we_i         = 1;
-      wbi.wb_sel_i        = 4'b1111;
-      wbi.wb_addr_i       = Address[31:2]+i;
-      wbi.wb_dat_i        = $random & 32'hFFFFFFFF;
-      dfifo.push_back(wbi.wb_dat_i);
-
-      do begin
-          @ (posedge sys_clk);
-      end while(wbi.wb_ack_o == 1'b0);
-          @ (negedge sys_clk);
+   input [31:0] Address;
+   input [7:0]  bl;
+   int i;
    
-       $display("tb_top:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,wbi.wb_addr_i,wbi.wb_dat_i);
+   automatic logic [31:0] data = $random & 32'hFFFFFFFF;
+   
+   afifo.push_back(Address);
+   bfifo.push_back(bl);
+   
+   for(i=0; i < bl; i++) begin
+      
+      dfifo.push_back(data);
+      $display("tb_top:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,Address,data);
+      wbi.write(Address[31:2]+i, bl, data);
    end
-   wbi.wb_stb_i        = 0;
-   wbi.wb_cyc_i        = 0;
-   wbi.wb_we_i         = 'hx;
-   wbi.wb_sel_i        = 'hx;
-   wbi.wb_addr_i       = 'hx;
-   wbi.wb_dat_i        = 'hx;
-end
+   
 endtask
 
-task burst_read;
-reg [31:0] Address;
-reg [7:0]  bl;
+task burst_read();
 
-int i,j;
-reg [31:0]   exp_data;
-begin
-  
-   Address = afifo.pop_front(); 
-   bl      = bfifo.pop_front(); 
-   @ (negedge sys_clk);
+   automatic logic [31:0] address = afifo.pop_front(); 
+   automatic logic  [7:0] bl      = bfifo.pop_front();
+   logic [31:0] exp_data, data;
+   int j;
+   //logic [31:0] data;
    
-      $display("tb_top:  Read Address: %x, Burst Size: %d",Address,bl);
-      for(j=0; j < bl; j++) begin
-         wbi.wb_stb_i        = 1;
-         wbi.wb_cyc_i        = 1;
-         wbi.wb_we_i         = 0;
-         wbi.wb_addr_i       = Address[31:2]+j;
-
-         exp_data        = dfifo.pop_front(); // Exptected Read Data
-         do begin
-             @ (posedge sys_clk);
-         end while(wbi.wb_ack_o == 1'b0);
-         if(wbi.wb_dat_o !== exp_data) begin
-             $display("tb_top:  READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o,exp_data);
-             ErrCnt = ErrCnt+1;
-         end else begin
-             $display("tb_top:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,wbi.wb_addr_i,wbi.wb_dat_o);
-         end 
-         @ (negedge sdram_clk);
+   for(j=0; j < bl; j++) begin
+      $display("tb_top:  Read Address: %x, Burst Size: %d",address,bl);
+      wbi.read(address[31:2]+j, bl, data);
+      exp_data = dfifo.pop_front();
+      if (data !== exp_data) begin
+          $display("tb_top:  READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x",j,address,data,exp_data);
+          ErrCnt = ErrCnt+1;
+      end else begin
+          $display("tb_top:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x",j,address,data);
       end
-   wbi.wb_stb_i        = 0;
-   wbi.wb_cyc_i        = 0;
-   wbi.wb_we_i         = 'hx;
-   wbi.wb_addr_i       = 'hx;
-end
+   end
+   
 endtask
 
 

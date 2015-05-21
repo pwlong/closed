@@ -26,6 +26,14 @@ interface cfg_if ();
     logic [SDR_REFRESH_TIMER_W-1:0]   cfg_sdr_rfsh;
     logic [SDR_REFRESH_ROW_CNT_W-1:0] cfg_sdr_rfmax;
     wire sdr_init_done;
+    
+    
+    //--------------------
+    // data/address/burst length FIFO
+    //--------------------
+    int dfifo[$]; // data fifo
+    int afifo[$]; // address  fifo
+    int bfifo[$]; // Burst Length fifo
 
     modport master (
         output cfg_sdr_width       ,
@@ -82,7 +90,7 @@ interface cfg_if ();
       cfg_sdr_rfmax    <=  3'h6    ;
       cfg_req_depth    <=  2'h3    ;
       cfg_sdr_en       <=  1'b1    ;
-    
     endtask
+    
 
 endinterface
