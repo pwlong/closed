@@ -206,7 +206,7 @@ interface sdr_bus #(
                                         bankNextState[i] = RD_W_PC;
                                     else
                                         bankNextState[i] = RD;
-                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i))
+                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = PRECHARGING;
                                 else
                                     bankNextState[i] = ACTIVE;
