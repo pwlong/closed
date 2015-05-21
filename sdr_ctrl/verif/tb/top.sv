@@ -32,7 +32,7 @@ module top;
     wire sdr_init_done;
 
     // INTERFACE DECLARATIONS
-    wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
+    wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN),.wb_sdram_clk_i(sdram_clk));
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
              .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W),
              .CFG_SDR_WIDTH(CFG_SDR_WIDTH),
