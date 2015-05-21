@@ -4,7 +4,6 @@ module top;
     // DEFINE TEST PARAMETERS
     localparam dw = 32; // application data width
     localparam tw = 8;  // tag id width
-    localparam bl = 5;  // burst length width
 `ifdef SDR_32BIT
     localparam    SDR_DW          = 32;           // SDRAM Data Width
     localparam    CFG_SDR_WIDTH   = 2'b00;
@@ -25,7 +24,7 @@ module top;
     localparam TRCD_D    = 2; // Active to Read or Write Delay
     localparam TRP_D     = 2; // Precharge Command Period
     localparam TRCAR_D   = 7; // Active-Active/Auto-Refresh Command Period
-    localparam BURST_LEN = 3; // READ/WRITE Burst Length
+    localparam BURST_LEN = dw/SDR_DW; // READ/WRITE Burst Length
 
     // WIRE DECLARATIONS
     wire sys_clk,sdram_clk,sdram_clk_d,RESETN;
