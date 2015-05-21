@@ -1,7 +1,13 @@
 interface sdr_bus #(
   parameter  SDR_DW   = 16,         // SDRAM Data Width 
-  parameter  SDR_BW   = 2           // SDRAM Byte Width
-  )(
+  parameter  SDR_BW   = 2,          // SDRAM Byte Width
+  // Parameters to describe timing attributes of interface
+  parameter BURST_LENGTH = 1,
+  parameter TRAS         = 1,
+  parameter TCAS         = 1,
+  parameter TRCD         = 1,
+  parameter TRP          = 1 
+)(
   input logic sdram_clk,                 // SDRAM Clock
   input logic sdram_clk_d,               // Delayed clock
   input logic sdram_resetn,
@@ -121,12 +127,40 @@ interface sdr_bus #(
 
   bankState_t bank0State, bank0NextState;
 
+  // Used to keep track of counts while in specific states
+  integer activatingCounter = 0;
+  integer refreshingCounter = 0;
+  integer readingCounter    = 0;
+  integer writingCounter    = 0;
+  integer prechargeCounter  = 0;
+
   // Bank 0 FSM Sequential Logic
   always_ff @(posedge sdram_clk) begin
     if (~sdram_resetn)
         bank0State <= INITIALIZING;
     else
         bank0State <= bank0NextState;
+  end
+
+  // Keep track of length of time
+  // in certain states
+  always_ff @(posedge sdram_clk) begin
+    case(bank0State)
+        REFRESHING:  refreshingCounter <= refreshingCounter + 1;
+        ACTIVATING:  activatingCounter <= activatingCounter + 1;
+        RD:          readingCounter    <= readingCounter + 1;
+        RD_W_PC:     readingCounter    <= readingCounter + 1;
+        WR:          writingCounter    <= writingCounter + 1;
+        WR_W_PC:     writingCounter    <= writingCounter + 1;
+        PRECHARGING: prechargeCounter  <= prechargeCounter + 1;
+        default: begin
+                      activatingCounter <= 0;
+                      refreshingCounter <= 0;
+                      readingCounter    <= 0;
+                      writingCounter    <= 0;
+                      prechargeCounter  <= 0;
+                 end
+    endcase
   end
 
   // Next State Combinational Logic
@@ -150,7 +184,10 @@ interface sdr_bus #(
                             bank0NextState = IDLE;
                         end
         ACTIVATING   :  begin
-                            bank0NextState = ACTIVE;
+                            if (activatingCounter >= TRCD)
+                                bank0NextState = ACTIVE;
+                            else
+                                bank0NextState = ACTIVATING;
                         end
         ACTIVE       :  begin
                             if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
@@ -178,10 +215,16 @@ interface sdr_bus #(
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
                             else
-                                bank0NextState = ACTIVE;
+                                if (readingCounter >= BURST_LENGTH)
+                                    bank0NextState = ACTIVE;
+                                else
+                                    bank0NextState = RD;
                         end
         RD_W_PC      :  begin
-                           bank0NextState = PRECHARGING;
+                           if (readingCounter >= BURST_LENGTH)
+                               bank0NextState = PRECHARGING;
+                           else
+                               bank0NextState = RD_W_PC;
                         end
         WR           :  begin
                             if     ((cmd === CMD_WRITE)     & (sdr_ba === 2'b00))
@@ -193,10 +236,16 @@ interface sdr_bus #(
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
                             else
-                                bank0NextState = ACTIVE;
+                                if (writingCounter >= BURST_LENGTH)
+                                    bank0NextState = ACTIVE;
+                                else
+                                    bank0NextState = WR;
                         end
         WR_W_PC      :  begin
-                            bank0NextState = PRECHARGING;
+                            if (writingCounter >= BURST_LENGTH)
+                                bank0NextState = PRECHARGING;
+                            else
+                                bank0NextState = WR_W_PC;
                         end
         PRECHARGING  :  begin
                             bank0NextState = IDLE;

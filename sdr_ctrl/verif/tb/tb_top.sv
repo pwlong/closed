@@ -54,7 +54,14 @@ module tb_top #(
     parameter P_SYS  = 10,     //    200MHz
     parameter P_SDR  = 20,     //    100MHz
     parameter CFG_SDR_WIDTH = 2'b10,
-    parameter CFG_COLBITS   = 2'b00
+    parameter CFG_COLBITS   = 2'b00,
+    parameter TWR       = 1, // Write Recovery
+    parameter TRAS_D    = 4, // Active to Precharge Delay
+    parameter TCAS      = 3, // CAS Latency
+    parameter TRCD_D    = 2, // Active to Read or Write Delay
+    parameter TRP_D     = 2, // Precharge Command Period
+    parameter TRCAR_D   = 7, // Active-Active/Auto-Refresh Command Period
+    parameter BURST_LEN = 3  // READ/WRITE Burst Length
 )
 (
     output logic sys_clk,
@@ -84,18 +91,23 @@ int bfifo[$]; // Burst Length fifo
 // Initialize Configuration Parameters
 initial begin
     cfg.cfg_sdr_width    <= CFG_SDR_WIDTH;
-    cfg.cfg_colbits      <= CFG_COLBITS;
-    cfg.cfg_req_depth    <=  2'h3   ;
-    cfg.cfg_sdr_en       <=  1'b1   ;
-    cfg.cfg_sdr_mode_reg <=  13'h033;
-    cfg.cfg_sdr_tras_d   <=  4'h4   ;
-    cfg.cfg_sdr_trp_d    <=  4'h2   ;
-    cfg.cfg_sdr_trcd_d   <=  4'h2   ;
-    cfg.cfg_sdr_cas      <=  3'h3   ;
-    cfg.cfg_sdr_trcar_d  <=  4'h7   ;
-    cfg.cfg_sdr_twr_d    <=  4'h1   ;
-    cfg.cfg_sdr_rfsh     <=  12'h100;
-    cfg.cfg_sdr_rfmax    <=  3'h6   ;
+    cfg.cfg_colbits      <= CFG_COLBITS  ;
+    cfg.cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length
+    cfg.cfg_sdr_mode_reg[3]     <= 0 ;         // Burst Type
+    cfg.cfg_sdr_mode_reg[6:4]   <= TCAS;       // CAS Delay
+    cfg.cfg_sdr_mode_reg[8:7]   <= 0 ;         // OP Mode
+    cfg.cfg_sdr_mode_reg[9]     <= 0 ;         // Write Burst mode
+    cfg.cfg_sdr_mode_reg[12:10] <= 0 ;         // Reserved
+    cfg.cfg_sdr_tras_d   <=  TRAS_D  ;
+    cfg.cfg_sdr_trp_d    <=  TRP_D   ;
+    cfg.cfg_sdr_trcd_d   <=  TRCD_D  ;
+    cfg.cfg_sdr_cas      <=  TCAS    ;
+    cfg.cfg_sdr_trcar_d  <=  TRCAR_D ;
+    cfg.cfg_sdr_twr_d    <=  TWR     ;
+    cfg.cfg_sdr_rfsh     <=  12'h100 ;
+    cfg.cfg_sdr_rfmax    <=  3'h6    ;
+    cfg.cfg_req_depth    <=  2'h3    ;
+    cfg.cfg_sdr_en       <=  1'b1    ;
 end
 
 reg [31:0] read_data;

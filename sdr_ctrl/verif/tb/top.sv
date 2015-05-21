@@ -18,6 +18,15 @@ module top;
     localparam    SDR_BW          = (SDR_DW / 8); // SDRAM Byte Width
     localparam    CFG_COLBITS     = 2'b00;        // 8 Bit Column Address
 
+    // Some test timing parameters
+    localparam TWR       = 1; // Write Recovery
+    localparam TRAS_D    = 4; // Active to Precharge Delay
+    localparam TCAS      = 3; // CAS Latency
+    localparam TRCD_D    = 2; // Active to Read or Write Delay
+    localparam TRP_D     = 2; // Precharge Command Period
+    localparam TRCAR_D   = 7; // Active-Active/Auto-Refresh Command Period
+    localparam BURST_LEN = 3; // READ/WRITE Burst Length
+
     // WIRE DECLARATIONS
     wire sys_clk,sdram_clk,sdram_clk_d,RESETN;
     wire sdr_init_done;
@@ -26,12 +35,29 @@ module top;
     wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
              .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W)) cfg();
-    sdr_bus #(SDR_DW,SDR_BW) sdram_bus (sdram_clk, sdram_clk_d, RESETN,cfg.sdr_init_done);
+    sdr_bus #(.SDR_DW(SDR_DW),
+              .SDR_BW(SDR_BW),
+              .BURST_LENGTH(BURST_LEN),
+              .TRAS(TRAS_D),
+              .TCAS(TCAS),
+              .TRCD(TRCD_D),
+              .TRP(TRP_D)
+    ) sdram_bus (.sdram_clk,
+                 .sdram_clk_d,
+                 .sdram_resetn(RESETN),
+                 .sdr_init_done(cfg.sdr_init_done));
 
     // TESTBENCH
     tb_top #(
         .CFG_SDR_WIDTH(CFG_SDR_WIDTH),
-        .CFG_COLBITS(CFG_COLBITS)
+        .CFG_COLBITS(CFG_COLBITS),
+        .TWR(TWR),
+        .TRAS_D(TRAS_D),
+        .TCAS(TCAS),
+        .TRCD_D(TRCD_D),
+        .TRP_D(TRP_D),
+        .TRCAR_D(TRCAR_D),
+        .BURST_LEN(BURST_LEN)
     ) testbench
     (
         .sys_clk,
