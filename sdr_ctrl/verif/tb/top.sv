@@ -34,7 +34,17 @@ module top;
     // INTERFACE DECLARATIONS
     wishbone_interface #(.data_width(dw)) wbi(.wb_clk_i(sys_clk),.wb_rst_i(!RESETN));
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
-             .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W)) cfg();
+             .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W),
+             .CFG_SDR_WIDTH(CFG_SDR_WIDTH),
+             .CFG_COLBITS(2'b00),
+             .TWR(1),     
+             .TRAS_D(4),         
+             .TCAS(3),           
+             .TRCD_D(2),         
+             .TRP_D(2),          
+             .TRCAR_D(7),        
+             .BURST_LEN(3)
+    ) cfg();
     sdr_bus #(.SDR_DW(SDR_DW),
               .SDR_BW(SDR_BW),
               .BURST_LENGTH(BURST_LEN),
