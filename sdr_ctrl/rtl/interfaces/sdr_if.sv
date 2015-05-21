@@ -184,7 +184,7 @@ interface sdr_bus #(
                             bank0NextState = IDLE;
                         end
         ACTIVATING   :  begin
-                            if (activatingCounter >= TRCD)
+                            if (activatingCounter >= TRCD-1)
                                 bank0NextState = ACTIVE;
                             else
                                 bank0NextState = ACTIVATING;
@@ -215,13 +215,13 @@ interface sdr_bus #(
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
                             else
-                                if (readingCounter >= BURST_LENGTH)
+                                if (readingCounter >= BURST_LENGTH - 1)
                                     bank0NextState = ACTIVE;
                                 else
                                     bank0NextState = RD;
                         end
         RD_W_PC      :  begin
-                           if (readingCounter >= BURST_LENGTH)
+                           if (readingCounter >= BURST_LENGTH - 1)
                                bank0NextState = PRECHARGING;
                            else
                                bank0NextState = RD_W_PC;
@@ -236,13 +236,13 @@ interface sdr_bus #(
                             else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === 2'b00))
                                 bank0NextState = ACTIVE;
                             else
-                                if (writingCounter >= BURST_LENGTH)
+                                if (writingCounter >= BURST_LENGTH - 1)
                                     bank0NextState = ACTIVE;
                                 else
                                     bank0NextState = WR;
                         end
         WR_W_PC      :  begin
-                            if (writingCounter >= BURST_LENGTH)
+                            if (writingCounter >= BURST_LENGTH - 1)
                                 bank0NextState = PRECHARGING;
                             else
                                 bank0NextState = WR_W_PC;
