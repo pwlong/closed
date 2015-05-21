@@ -1,7 +1,16 @@
-interface cfg_if();
+interface cfg_if ();
    
     parameter SDR_REFRESH_TIMER_W   = 1;
     parameter SDR_REFRESH_ROW_CNT_W = 1;
+    parameter CFG_SDR_WIDTH = 2'b10;
+    parameter CFG_COLBITS   = 2'b00;
+    parameter TWR       = 1; // Write Recovery
+    parameter TRAS_D    = 4; // Active to Precharge Delay
+    parameter TCAS      = 3; // CAS Latency
+    parameter TRCD_D    = 2; // Active to Read or Write Delay
+    parameter TRP_D     = 2; // Precharge Command Period
+    parameter TRCAR_D   = 7; // Active-Active/Auto-Refresh Command Period
+    parameter BURST_LEN = 3; // READ/WRITE Burst Length
 
     logic [1:0]   cfg_sdr_width       ; // 2'b00 - 32 Bit SDR, 2'b01 - 16 Bit SDR, 2'b1x - 8 Bit
     logic [1:0]   cfg_colbits         ; // 2'b00 - 8 Bit column address, 
@@ -32,7 +41,8 @@ interface cfg_if();
         output cfg_sdr_twr_d       ,
         output cfg_sdr_rfsh        ,
         output cfg_sdr_rfmax       ,
-        input  sdr_init_done
+        input  sdr_init_done       ,
+        task setup()
     );
 
     modport slave (
@@ -51,5 +61,28 @@ interface cfg_if();
         input  cfg_sdr_rfmax       ,
         output sdr_init_done
     );
+    
+    
+    task setup();
+      cfg_sdr_width    <= CFG_SDR_WIDTH;
+      cfg_colbits      <= CFG_COLBITS  ;
+      cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length
+      cfg_sdr_mode_reg[3]     <= 0 ;         // Burst Type
+      cfg_sdr_mode_reg[6:4]   <= TCAS;       // CAS Delay
+      cfg_sdr_mode_reg[8:7]   <= 0 ;         // OP Mode
+      cfg_sdr_mode_reg[9]     <= 0 ;         // Write Burst mode
+      cfg_sdr_mode_reg[12:10] <= 0 ;         // Reserved
+      cfg_sdr_tras_d   <=  TRAS_D  ;
+      cfg_sdr_trp_d    <=  TRP_D   ;
+      cfg_sdr_trcd_d   <=  TRCD_D  ;
+      cfg_sdr_cas      <=  TCAS    ;
+      cfg_sdr_trcar_d  <=  TRCAR_D ;
+      cfg_sdr_twr_d    <=  TWR     ;
+      cfg_sdr_rfsh     <=  12'h100 ;
+      cfg_sdr_rfmax    <=  3'h6    ;
+      cfg_req_depth    <=  2'h3    ;
+      cfg_sdr_en       <=  1'b1    ;
+    
+    endtask
 
 endinterface

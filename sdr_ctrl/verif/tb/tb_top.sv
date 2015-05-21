@@ -90,24 +90,25 @@ int bfifo[$]; // Burst Length fifo
 
 // Initialize Configuration Parameters
 initial begin
-    cfg.cfg_sdr_width    <= CFG_SDR_WIDTH;
-    cfg.cfg_colbits      <= CFG_COLBITS  ;
-    cfg.cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length
-    cfg.cfg_sdr_mode_reg[3]     <= 0 ;         // Burst Type
-    cfg.cfg_sdr_mode_reg[6:4]   <= TCAS;       // CAS Delay
-    cfg.cfg_sdr_mode_reg[8:7]   <= 0 ;         // OP Mode
-    cfg.cfg_sdr_mode_reg[9]     <= 0 ;         // Write Burst mode
-    cfg.cfg_sdr_mode_reg[12:10] <= 0 ;         // Reserved
-    cfg.cfg_sdr_tras_d   <=  TRAS_D  ;
-    cfg.cfg_sdr_trp_d    <=  TRP_D   ;
-    cfg.cfg_sdr_trcd_d   <=  TRCD_D  ;
-    cfg.cfg_sdr_cas      <=  TCAS    ;
-    cfg.cfg_sdr_trcar_d  <=  TRCAR_D ;
-    cfg.cfg_sdr_twr_d    <=  TWR     ;
-    cfg.cfg_sdr_rfsh     <=  12'h100 ;
-    cfg.cfg_sdr_rfmax    <=  3'h6    ;
-    cfg.cfg_req_depth    <=  2'h3    ;
-    cfg.cfg_sdr_en       <=  1'b1    ;
+    //cfg.cfg_sdr_width    <= CFG_SDR_WIDTH;
+    //cfg.cfg_colbits      <= CFG_COLBITS  ;
+    //cfg.cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length
+    //cfg.cfg_sdr_mode_reg[3]     <= 0 ;         // Burst Type
+    //cfg.cfg_sdr_mode_reg[6:4]   <= TCAS;       // CAS Delay
+    //cfg.cfg_sdr_mode_reg[8:7]   <= 0 ;         // OP Mode
+    //cfg.cfg_sdr_mode_reg[9]     <= 0 ;         // Write Burst mode
+    //cfg.cfg_sdr_mode_reg[12:10] <= 0 ;         // Reserved
+    //cfg.cfg_sdr_tras_d   <=  TRAS_D  ;
+    //cfg.cfg_sdr_trp_d    <=  TRP_D   ;
+    //cfg.cfg_sdr_trcd_d   <=  TRCD_D  ;
+    //cfg.cfg_sdr_cas      <=  TCAS    ;
+    //cfg.cfg_sdr_trcar_d  <=  TRCAR_D ;
+    //cfg.cfg_sdr_twr_d    <=  TWR     ;
+    //cfg.cfg_sdr_rfsh     <=  12'h100 ;
+    //cfg.cfg_sdr_rfmax    <=  3'h6    ;
+    //cfg.cfg_req_depth    <=  2'h3    ;
+    //cfg.cfg_sdr_en       <=  1'b1    ;
+    cfg.setup();
 end
 
 reg [31:0] read_data;
