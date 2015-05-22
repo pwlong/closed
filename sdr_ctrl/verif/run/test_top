@@ -10,9 +10,6 @@ rm ../log/*.log
 ./run_modelsim top SDR_16BIT
 ./run_modelsim top SDR_32BIT
 
-./run_modelsim core SDR_8BIT
-./run_modelsim core SDR_16BIT
-./run_modelsim core SDR_32BIT
 
 clear
 
