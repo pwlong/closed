@@ -29,7 +29,7 @@ interface wishbone_interface(
                     input  wb_rst_i,
                     input  wb_dat_o,
                     task   read(),
-                    task   write());
+                    task   write() );
 
     modport slave(  input  wb_stb_i,
                     input  wb_addr_i,
@@ -55,7 +55,7 @@ interface wishbone_interface(
          wb_cyc_i        = 1;
          wb_we_i         = 1;
          wb_sel_i        = 4'b1111;
-         wb_addr_i = Address;
+         wb_addr_i       = Address;
          wb_dat_i        = data;
          
          do begin

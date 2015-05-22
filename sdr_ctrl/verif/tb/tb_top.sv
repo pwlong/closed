@@ -297,13 +297,13 @@ task burst_write;
    input [7:0]  bl;
    int i;
    
-   automatic logic [31:0] data = $random & 32'hFFFFFFFF;
+   automatic logic [31:0] data;
    
    afifo.push_back(Address);
    bfifo.push_back(bl);
    
    for(i=0; i < bl; i++) begin
-      
+      data = $random & 32'hFFFFFFFF;;
       dfifo.push_back(data);
       $display("tb_top:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ",i,Address,data);
       wbi.write(Address[31:2]+i, bl, data);
@@ -317,7 +317,6 @@ task burst_read();
    automatic logic  [7:0] bl      = bfifo.pop_front();
    logic [31:0] exp_data, data;
    int j;
-   //logic [31:0] data;
    
    for(j=0; j < bl; j++) begin
       $display("tb_top:  Read Address: %x, Burst Size: %d",address,bl);
