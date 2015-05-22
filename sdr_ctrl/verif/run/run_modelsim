@@ -32,13 +32,17 @@ echo " Runing test programs "
 echo "###########################################"
 
 set i = 0;
+set test = $1;								# hacky way to use "emul" as a command to compile both top_hvl and top_hdl
+if ($test == "emul") then
+		set test = "top_hvl top_hdl";
+endif
         echo "###########################################"
 foreach run_test ($sdr_tests)
 	@ i += 1;
 	#echo ""
 	echo "### Running test ${i}: ${run_test}"
 
-        vsim -do run.do -c $1 +${run_test} | tee  ../log/run.log
+        vsim -do run.do -c $test +${run_test} | tee  ../log/run.log
 	if ($status != 0) then
 	  cat ../log/run.log
 	  exit

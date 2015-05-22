@@ -1,6 +1,6 @@
 interface wishbone_interface(
     input logic wb_clk_i,
-    input logic  wb_rst_i,
+    input logic wb_rst_i,
     input logic wb_sdram_clk_i
 );
     //pragma attribute wishbone_interface partition_interface_xif
@@ -44,6 +44,9 @@ interface wishbone_interface(
                     output wb_ack_o,
                     output wb_dat_o );
                     
+    task waitForReset;
+        @(negedge wb_rst_i);
+    endtask
     
     task write;
       input [31:0] Address;

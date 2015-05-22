@@ -6,10 +6,15 @@ else
    \rm -rf work
    vlib work
 endif
-if($1 == "core") then # run SDRAM Core level test case
-   echo "COMPILING: vlog -sv -work work +define+$2 -f filelist_core.f"
-   vlog -sv -work work +define+$2 -f filelist_core.f
-else # Run SDRAM Top Level test cases
-   echo "COMPILING: vlog -sv -work work +define+$2 -f filelist_top.f"
-   vlog -sv -work work +define+$2 -f filelist_top.f
+
+set FILELIST="filelist_top.f"    # default test case
+
+if($1 == "core") then            # run SDRAM Core level test case
+   set FILELIST="filelist_core.f"
+else if($1 == "emul") then       # run emulation test case
+   set FILELIST="filelist_emul.f"
 endif
+
+set COMMAND="vlog -sv -work work +define+$2 -f $FILELIST"
+echo "COMPILING: $COMMAND"
+$COMMAND
