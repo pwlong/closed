@@ -3,6 +3,7 @@ interface wishbone_interface(
     input logic  wb_rst_i,
     input logic wb_sdram_clk_i
 );
+    //pragma attribute wishbone_interface partition_interface_xif
 
     parameter data_width    = 32;
     parameter address_width = 26;

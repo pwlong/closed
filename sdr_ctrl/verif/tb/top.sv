@@ -35,14 +35,14 @@ module top;
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
              .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W),
              .CFG_SDR_WIDTH(CFG_SDR_WIDTH),
-             .CFG_COLBITS(2'b00),
-             .TWR(1),     
-             .TRAS_D(4),         
-             .TCAS(3),           
-             .TRCD_D(2),         
-             .TRP_D(2),          
-             .TRCAR_D(7),        
-             .BURST_LEN(3)
+             .CFG_COLBITS(CFG_COLBITS),
+             .TWR(TWR),
+             .TRAS_D(TRAS_D),
+             .TCAS(TCAS),
+             .TRCD_D(TRCD_D),
+             .TRP_D(TRP_D),
+             .TRCAR_D(TRCAR_D),
+             .BURST_LEN(BURST_LEN)
     ) cfg();
     sdr_bus #(.SDR_DW(SDR_DW),
               .SDR_BW(SDR_BW),
@@ -95,7 +95,7 @@ module top;
     mt48lc2m32b2 #(.data_bits(32)) u_sdram32 (.sdram_bus(sdram_bus));
     `elsif SDR_16BIT
     IS42VM16400K u_sdram16 (.sdram_bus(sdram_bus));
-    `else 
+    `else
     mt48lc8m8a2 #(.data_bits(8)) u_sdram8 (.sdram_bus(sdram_bus));
     `endif
 
