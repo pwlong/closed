@@ -90,9 +90,10 @@ module top_hdl();
     mt48lc8m8a2 #(.data_bits(8)) u_sdram8 (.sdram_bus(sdram_bus));
     `endif
 
+
     // clocks
     // tbx clkgen
-    initial begin
+    /*initial begin
         sys_clk = 0;
         forever begin
             #(P_SYS/2) sys_clk = ~sys_clk;
@@ -113,7 +114,15 @@ module top_hdl();
         forever begin
             #(2.0) sdram_clk_d = sdram_clk; // according to the old testbench
         end                                  // this fixes the "sdram clk timing issue", whatever that means
-    end
+    end*/
+
+initial sys_clk = 0;
+initial sdram_clk = 0;
+always #(P_SYS/2) sys_clk = ~sys_clk;
+always #(P_SDR/2) sdram_clk = ~sdram_clk;
+
+// to fix the sdram interface timing issue
+assign  #(2.0) sdram_clk_d   = sdram_clk;
 
     // reset
     // tbx clkgen

@@ -101,11 +101,11 @@ initial begin
   $display("-------------------------------------- ");
   $display(" Case-1: Single Write/Read Case        ");
   $display("-------------------------------------- ");
-/*
+
   burst_write(32'h4_0000,8'h4);
 
   burst_read();
-/*
+
   // Repeat one more time to analysis the
   // SDRAM state change for same col/row address
   $display("-------------------------------------- ");
@@ -251,7 +251,7 @@ initial begin
      burst_read();
   end
   
-  */
+  
 
 
         $display("###############################");
