@@ -306,8 +306,6 @@ interface sdr_bus #(
         if (i !== j) begin
             if (((sdr_ba === j) | (aux_cmd & cmd === CMD_PRECHARGE)) & (cmd !== CMD_BURST_TERMINATE)) begin
                 case (bankState[i])
-                    IDLE:        doCrossBankCommandAssert(i,j,bankState[i],1'b1);
-                    REFRESHING:  doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
                     ACTIVATING:  doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
                     ACTIVE:      doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
                     RD:          doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
