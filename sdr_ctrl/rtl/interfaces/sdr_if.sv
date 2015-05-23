@@ -7,6 +7,7 @@ interface sdr_bus #(
   parameter TCAS         = 1, // CAS Delay
   parameter TRCD         = 1, // Ras to Cas Delay
   parameter TRP          = 1, // Precharge Command Period
+  parameter TWR          = 1, // Write Recover Time
   parameter VERBOSE      = 1
 )(
   input logic sdram_clk,          // SDRAM Clock
@@ -286,26 +287,38 @@ interface sdr_bus #(
   end
 
   // Define sequences that describe timing violations
+  // and asser that they are never observed
   genvar k;
   generate
     for (k = 0; k < 4; k++) begin
-      sequence trasViolation;
-        @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]
-                             (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
-      endsequence
-      sequence trcdViolation;
-        @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRCD-1]
-                             ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
-      endsequence
-      sequence trpViolation;
-        @(posedge sdram_clk) ((cmd === CMD_PRECHARGE)  & ((sdr_ba === k) | aux_cmd) & (bankState[k] !== IDLE)) ##[1:TRP-1]
-                             ((sdr_ba === k) & (~cmd_nop));
-      endsequence
-
-      // Assert that the timing violation sequences are not detected
-      assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
-      assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
-      assert property (not trpViolation)  else $display("sdrc_if: Bank %p Trp  violation", k);
+      if (TRAS > 1) begin
+        sequence trasViolation;
+            @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]
+                                 (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+          endsequence
+          assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
+      end
+      if (TRCD > 1) begin
+          sequence trcdViolation;
+            @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRCD-1]
+                                 ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
+          endsequence
+          assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
+      end
+      if (TRP > 1) begin
+          sequence trpViolation;
+            @(posedge sdram_clk) ((cmd === CMD_PRECHARGE)  & ((sdr_ba === k) | aux_cmd) & (bankState[k] !== IDLE)) ##[1:TRP-1]
+                                 ((sdr_ba === k) & (~cmd_nop));
+          endsequence
+          assert property (not trpViolation)  else $display("sdrc_if: Bank %p Trp  violation", k);
+      end
+      if (TWR > 1) begin
+          sequence twrViolation;
+            @(posedge sdram_clk) ((cmd === CMD_WRITE) & (sdr_ba === k)) ##[1:TWR-1]
+                                 (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+          endsequence
+          assert property (not twrViolation)  else $display("sdrc_if: Bank %p Twr  violation", k);
+      end
     end
   endgenerate
 
