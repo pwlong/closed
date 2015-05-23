@@ -116,6 +116,8 @@ interface sdr_bus #(
   assign cmd_idle  = (cmd_nop | cmd === CMD_ACTIVE | cmd === CMD_AUTO_REFRESH | cmd === CMD_LOAD_MODE_REGISTER | cmd === CMD_PRECHARGE);
   assign cmd_act   = (cmd_nop | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
   assign cmd_xfr   = (cmd_act | cmd === CMD_BURST_TERMINATE);
+  bit crossBankLegalCommand;
+  assign crossBankLegalCommand = (cmd_nop | cmd === CMD_ACTIVE | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
 
   task doCommandAssert(integer bNum, bankState_t bankState, bit cmdIsLegal);
     begin
@@ -124,6 +126,15 @@ interface sdr_bus #(
               $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
         end else
             $display("sdrc_if: BANK: %p COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
+    end
+  endtask
+
+  task doCrossBankCommandAssert(integer banki, integer bankj, bankState_t bankiState, bit cmdIsLegal);
+    begin
+        assert(cmdIsLegal)
+        else
+          $display("sdrc_if: Bank %p In State %p, Command %p issued to bank %p FAIL", banki, bankiState, cmd, bankj);
+
     end
   endtask
   
@@ -267,6 +278,7 @@ interface sdr_bus #(
   end
 
   // Validates commands are legal for each bank in each state
+  // These are for Bank N -> Bank N checks
   always@ (posedge sdram_clk) begin
     for(int i = 0; i < 4; i++) begin
         if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE)) begin
@@ -286,8 +298,32 @@ interface sdr_bus #(
     end
   end
 
+  // Validates commands are legal for banks in each state
+  // These are for Bank N -> Bank M checks
+  always@ (posedge sdram_clk) begin
+    for(int i = 0; i < 4; i++) begin
+      for (int j = 0; j < 4; j++) begin
+        if (i !== j) begin
+            if (((sdr_ba === j) | (aux_cmd & cmd === CMD_PRECHARGE)) & (cmd !== CMD_BURST_TERMINATE)) begin
+                case (bankState[i])
+                    IDLE:        doCrossBankCommandAssert(i,j,bankState[i],1'b1);
+                    REFRESHING:  doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    ACTIVATING:  doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    ACTIVE:      doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    RD:          doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    WR:          doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    RD_W_PC:     doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    WR_W_PC:     doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    PRECHARGING: doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                endcase
+            end
+        end
+      end
+    end
+  end
+
   // Define sequences that describe timing violations
-  // and asser that they are never observed
+  // and assert that they are never observed
   genvar k;
   generate
     for (k = 0; k < 4; k++) begin
