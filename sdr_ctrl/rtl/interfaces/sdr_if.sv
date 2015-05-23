@@ -118,10 +118,10 @@ interface sdr_bus #(
 
   task doCommandAssert(integer bNum, bankState_t bankState, bit cmdIsLegal);
     begin
-        assert(cmdIsLegal)
+        assert(cmdIsLegal) begin
             if (VERBOSE)
               $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
-        else
+        end else
             $display("sdrc_if: BANK: %p COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
     end
   endtask
