@@ -286,15 +286,20 @@ interface sdr_bus #(
   end
 
   // Define sequences that describe timing violations
-  sequence trasViolation;
-    @(posedge sdram_clk) (cmd === CMD_ACTIVE) ##[0:TRAS-1] (cmd === CMD_PRECHARGE);
-  endsequence
-  sequence trcdViolation;
-    @(posedge sdram_clk) (cmd === CMD_ACTIVE) ##[0:TRCD-1] ((cmd === CMD_WRITE) | (cmd === CMD_READ));
-  endsequence
+  genvar k;
+  generate
+    for (k = 0; k < 4; k++) begin
+      sequence trasViolation;
+        @(posedge sdram_clk) (cmd === CMD_ACTIVE & (sdr_ba === k)) ##[0:TRAS-1] (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+      endsequence
+      sequence trcdViolation;
+        @(posedge sdram_clk) (cmd === CMD_ACTIVE & (sdr_ba === k)) ##[0:TRCD-1] ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
+      endsequence
 
-  // Assert that the timing violation sequences are not detected
-  assert property (not trasViolation);
-  assert property (not trcdViolation);
+      // Assert that the timing violation sequences are not detected
+      assert property (not trasViolation);
+      assert property (not trcdViolation);
+    end
+  endgenerate
 
 endinterface
