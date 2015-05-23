@@ -283,4 +283,11 @@ interface sdr_bus #(
     end
   end
 
+  // Define sequences that describe timing violations
+  sequence trasViolation;
+    @(posedge sdram_clk) (cmd === CMD_ACTIVE) ##[0:TRAS-1] (cmd === CMD_PRECHARGE);
+  endsequence
+
+  assert property (not trasViolation);
+
 endinterface
