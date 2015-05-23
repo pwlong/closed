@@ -6,7 +6,8 @@ interface sdr_bus #(
   parameter TRAS         = 1, // Activate to Precharge Delay
   parameter TCAS         = 1, // CAS Delay
   parameter TRCD         = 1, // Ras to Cas Delay
-  parameter TRP          = 1  // Precharge Command Period
+  parameter TRP          = 1, // Precharge Command Period
+  parameter VERBOSE      = 1
 )(
   input logic sdram_clk,          // SDRAM Clock
   input logic sdram_clk_d,        // Delayed clock
@@ -118,13 +119,14 @@ interface sdr_bus #(
   task doCommandAssert(integer bNum, bankState_t bankState, bit cmdIsLegal);
     begin
         assert(cmdIsLegal)
-            $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
+            if (VERBOSE)
+              $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
         else
             $display("sdrc_if: BANK: %p COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
     end
   endtask
   
-
+  // Array of 4 values, one for each bank
   bankState_t bankState[0:3];
   bankState_t bankNextState[0:3];
 
@@ -135,7 +137,7 @@ interface sdr_bus #(
   integer writingCounter[0:3]    = '{0,0,0,0};
   integer prechargeCounter[0:3]  = '{0,0,0,0};
 
-  // Bank 0 FSM Sequential Logic
+  // Bank FSM Sequential Logic
   always_ff @(posedge sdram_clk) begin
     for (int i = 0; i < 4; i++) begin
         if (~sdram_resetn)
@@ -287,7 +289,12 @@ interface sdr_bus #(
   sequence trasViolation;
     @(posedge sdram_clk) (cmd === CMD_ACTIVE) ##[0:TRAS-1] (cmd === CMD_PRECHARGE);
   endsequence
+  sequence trcdViolation;
+    @(posedge sdram_clk) (cmd === CMD_ACTIVE) ##[0:TRCD-1] ((cmd === CMD_WRITE) | (cmd === CMD_READ));
+  endsequence
 
+  // Assert that the timing violation sequences are not detected
   assert property (not trasViolation);
+  assert property (not trcdViolation);
 
 endinterface
