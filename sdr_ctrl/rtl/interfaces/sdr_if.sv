@@ -297,8 +297,8 @@ interface sdr_bus #(
       endsequence
 
       // Assert that the timing violation sequences are not detected
-      assert property (not trasViolation);
-      assert property (not trcdViolation);
+      assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
+      assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
     end
   endgenerate
 
