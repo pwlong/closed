@@ -290,15 +290,22 @@ interface sdr_bus #(
   generate
     for (k = 0; k < 4; k++) begin
       sequence trasViolation;
-        @(posedge sdram_clk) (cmd === CMD_ACTIVE & (sdr_ba === k)) ##[0:TRAS-1] (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+        @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]
+                             (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
       endsequence
       sequence trcdViolation;
-        @(posedge sdram_clk) (cmd === CMD_ACTIVE & (sdr_ba === k)) ##[0:TRCD-1] ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
+        @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRCD-1]
+                             ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
+      endsequence
+      sequence trpViolation;
+        @(posedge sdram_clk) ((cmd === CMD_PRECHARGE)  & ((sdr_ba === k) | aux_cmd) & (bankState[k] !== IDLE)) ##[1:TRP-1]
+                             ((sdr_ba === k) & (~cmd_nop));
       endsequence
 
       // Assert that the timing violation sequences are not detected
       assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
       assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
+      assert property (not trpViolation)  else $display("sdrc_if: Bank %p Trp  violation", k);
     end
   endgenerate
 
