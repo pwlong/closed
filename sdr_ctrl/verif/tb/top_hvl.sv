@@ -48,31 +48,35 @@
 
 `timescale 1ns/1ps
 
+module top_hvl #(
+)
+();
+
 // class for storing and manipulating test cases
+// two ways to set the address
+//      directly set row/bank/column when calling 'new()'
+//      call 'new()' with 0s for row/bank/column then call 'setAddress(<32bit address>)'
+// data is randomized whenever 'new()' is called
 class TestCase;
     logic [31:0] address;
-    logic  [7:0] [31:0] data;
+    logic [15:0] [31:0] data;
     logic  [7:0] bl; // burst length
     logic [19:0] row;
     logic  [1:0] bank;
     logic  [7:0] column;
     
     function new(logic [19:0] row, logic [1:0] bank, logic [7:0] column, logic [7:0] bl);
-        int i = 0;
         this.row        = row;
         this.bank       = bank;
         this.column     = column;
         this.bl         = bl;
-        for (i = 0; i < 8; i++) begin
-            if (i < this.bl)
-                this.data[i]       = $random & 32'hFFFFFFFF;
-        end
-        this.address    = {row,bank,column,2'b0};
+        this.newData();
+        this.address    = {row,bank,column,2'b0};   // forces alignment to 4'h0, 4'h4, 4'h8, 4'hC
     endfunction
     
     function void setAddress(logic [31:0] address);
-        this.address = address & 32'h00FF_FFFC;
-        this.row = address[31:12];
+        this.address = address & 32'h00FF_FFFC;     // forces alignment to 4'h0, 4'h4, 4'h8, 4'hC
+        this.row = address[31:12];  // pull the row/bank/column out
         this.bank = address[11:10];
         this.column = address[9:2];
     endfunction
@@ -85,11 +89,19 @@ class TestCase;
         return this.data;
     endfunction
     
-    function void setBL(logic [7:0] bl);
+    function void newData();
+        //for (int i = 0; i < 8; i++) begin
+        foreach (data[k]) begin
+            if (k < this.bl)
+                this.data[k]       = $random & 32'hFFFFFFFF;
+        end
+    endfunction
+    
+    function void setBL(logic [7:0] bl); // burst length
         this.bl = bl;
     endfunction
     
-    function logic [7:0] getBL();
+    function logic [7:0] getBL(); // burst length
         return this.bl;
     endfunction
     
@@ -105,17 +117,6 @@ class TestCase;
     endfunction
 
 endclass
-
-
-
-
-
-
-
-
-module top_hvl #(
-)
-();
 
 TestCase tcfifo[$]; // queue to hold test cases currently executing
 
@@ -191,7 +192,7 @@ initial begin
     burst_write(t);
     t = new(0,0,0,bl);
     t.setAddress(32'h0004_0FE0);
-    burst_write(t);
+    burst_write(t);             // 5th write
     t = new(0,0,0,bl);
     t.setAddress(32'h0005_0FE4);
     burst_write(t);
@@ -206,7 +207,7 @@ initial begin
     burst_write(t);
     t = new(0,0,0,bl);
     t.setAddress(32'h0009_0FD4);
-    burst_write(t);
+    burst_write(t);             // 10th write
     t = new(0,0,0,bl);
     t.setAddress(32'h000A_0FD8);
     burst_write(t);
@@ -221,7 +222,7 @@ initial begin
     burst_write(t);
     t = new(0,0,0,bl);
     t.setAddress(32'h000E_0FC8);
-    burst_write(t);
+    burst_write(t);             // 15th write
     t = new(0,0,0,bl);
     t.setAddress(32'h000F_0FCC);
     burst_write(t);
@@ -236,7 +237,7 @@ initial begin
     burst_write(t);
     t = new(0,0,0,bl);
     t.setAddress(32'h0013_0FBC);
-    burst_write(t);
+    burst_write(t);             // 20th write
     t = new(0,0,0,bl);
     t.setAddress(32'h0014_0FA0);
     burst_write(t);
@@ -248,32 +249,32 @@ initial begin
     burst_write(t);
     t = new(0,0,0,bl);
     t.setAddress(32'h0017_0FAC);
-    burst_write(t);
+    burst_write(t);             // 24th and final write
     
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
+    readAllQueue();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
+    //burst_read();
     
     
     $display("----------------------------------------");
@@ -290,11 +291,7 @@ initial begin
         t = new(row, bank, column, bl++);
         burst_write(t);
     end
-    
-    burst_read();
-    burst_read();
-    burst_read();
-    burst_read();
+    readAllQueue();
   
 
     $display("---------------------------------------");
@@ -316,9 +313,8 @@ initial begin
         bl++;
         bank++;
     end
-    for (i = 0; i < 16; i++) begin
-        burst_read();
-    end
+    //for (i = 0; i < 16; i++) begin
+    readAllQueue();
     
     // same thing but increment column each time
     row = 2;
@@ -336,9 +332,8 @@ initial begin
         bank++;
         column++;
     end
-    for (i = 0; i < 8; i++) begin
-        burst_read();
-    end
+    //for (i = 0; i < 8; i++) begin
+    readAllQueue();
   
     $display("---------------------------------------------------");
     $display(" Case-6: 20 loops of random numbers of random address/data write of random burst lengths and the same number of reads");
@@ -350,9 +345,7 @@ initial begin
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
-        for (i = 0; i < writes; i++) begin
-            burst_read;
-        end
+        readAllQueue();
     end
   
   
@@ -376,9 +369,7 @@ initial begin
     // empty the queue to prepare for next case
     i = tcfifo.size();
     $display(" case 7 - emptying queue");
-    for (k = 0; k < i; k++) begin
-        burst_read();
-    end
+    readAllQueue();
   
   
 
@@ -427,12 +418,16 @@ task burst_read();
 
 endtask
 
+task readAllQueue();
+    while (tcfifo.size > 0) begin
+        burst_read();
+    end
+endtask
+
 task waitForReset;
     @(negedge top_hdl.wbi.wb_rst_i);
 endtask
 
-
-        
 task wbsetup;
     top_hdl.wbi.wb_addr_i      = 0;
     top_hdl.wbi.wb_dat_i       = 0;
@@ -442,5 +437,7 @@ task wbsetup;
     top_hdl.wbi.wb_cyc_i       = 0;
 endtask
 
-
 endmodule
+
+
+
