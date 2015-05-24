@@ -121,15 +121,6 @@ module top_hdl();
         RESETN = 1;
         #1000;
     end
-        
-    initial begin
-        wbi.wb_addr_i      = 0;
-        wbi.wb_dat_i       = 0;
-        wbi.wb_sel_i       = 4'h0;
-        wbi.wb_we_i        = 0;
-        wbi.wb_stb_i       = 0;
-        wbi.wb_cyc_i       = 0;
-    end
 
 
 endmodule

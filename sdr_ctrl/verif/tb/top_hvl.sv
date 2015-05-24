@@ -129,9 +129,10 @@ logic  [7:0] bl;
 longint ErrCnt;
 int i, k, writes;
 
-// Initialize Configuration Parameters
+// Initialize Configuration Parameters and HVL<->HDL interface 
 initial begin
     top_hdl.cfg.setup();
+    wbsetup();
 end
 
 /////////////////////////////////////////////////////////////////////////
@@ -140,10 +141,10 @@ end
 initial begin
     
     $display("Waiting for reset");
-    top_hdl.wbi.waitForReset();
+    //top_hdl.wbi.waitForReset();
+    waitForReset();
     $display("Reset finished");
     
-
     ErrCnt = 0;
     
     @(posedge top_hdl.cfg.sdr_init_done) $display("SDR Init done");
@@ -424,6 +425,21 @@ task burst_read();
         end
     end
 
+endtask
+
+task waitForReset;
+    @(negedge top_hdl.wbi.wb_rst_i);
+endtask
+
+
+        
+task wbsetup;
+    top_hdl.wbi.wb_addr_i      = 0;
+    top_hdl.wbi.wb_dat_i       = 0;
+    top_hdl.wbi.wb_sel_i       = 4'h0;
+    top_hdl.wbi.wb_we_i        = 0;
+    top_hdl.wbi.wb_stb_i       = 0;
+    top_hdl.wbi.wb_cyc_i       = 0;
 endtask
 
 
