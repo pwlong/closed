@@ -1,9 +1,10 @@
 
-`include "sdrc_define.v"
+
+`include "../../rtl/core/sdrc_define.v"
 `timescale 1ns/1ps
-// this is the emulation side of Veloce (*shudder* such a dirty word)
+// this is the emulation side of Veloce 
 // it instantiates all modules, connects them up, and generates the system wide clock
-module top_hdl();
+module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
 
 
     // DEFINE TEST PARAMETERS
@@ -122,14 +123,15 @@ module top_hdl();
         #1000;
     end
         
-    initial begin
-        wbi.wb_addr_i      = 0;
-        wbi.wb_dat_i       = 0;
-        wbi.wb_sel_i       = 4'h0;
-        wbi.wb_we_i        = 0;
-        wbi.wb_stb_i       = 0;
-        wbi.wb_cyc_i       = 0;
+/* PWL testing gettinmg veloce running
+   initial begin
+       wbi.wb_addr_i      = 0;
+       wbi.wb_dat_i       = 0;
+       wbi.wb_sel_i       = 4'h0;
+       wbi.wb_we_i        = 0;
+       wbi.wb_stb_i       = 0;
+       wbi.wb_cyc_i       = 0;
     end
-
+*/
 
 endmodule
