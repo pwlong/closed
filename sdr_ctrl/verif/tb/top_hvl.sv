@@ -251,30 +251,7 @@ initial begin
     t.setAddress(32'h0017_0FAC);
     burst_write(t);             // 24th and final write
     
-    readAllQueue();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
-    //burst_read();
+    readAllQueue(); // read out the previous writes
     
     
     $display("----------------------------------------");
@@ -291,7 +268,7 @@ initial begin
         t = new(row, bank, column, bl++);
         burst_write(t);
     end
-    readAllQueue();
+    readAllQueue(); // read out the previous writes
   
 
     $display("---------------------------------------");
@@ -313,8 +290,8 @@ initial begin
         bl++;
         bank++;
     end
-    //for (i = 0; i < 16; i++) begin
-    readAllQueue();
+    
+    readAllQueue(); // read out the previous writes
     
     // same thing but increment column each time
     row = 2;
@@ -332,8 +309,8 @@ initial begin
         bank++;
         column++;
     end
-    //for (i = 0; i < 8; i++) begin
-    readAllQueue();
+    
+    readAllQueue(); // read out the previous writes
   
     $display("---------------------------------------------------");
     $display(" Case-6: 20 loops of random numbers of random address/data write of random burst lengths and the same number of reads");
@@ -345,7 +322,7 @@ initial begin
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
-        readAllQueue();
+        readAllQueue(); // read out the previous writes
     end
   
   
@@ -360,16 +337,15 @@ initial begin
             burst_write(t);
         end
         $display(" case 7 - writes: %2d finished", writes);
-        writes = $urandom_range(0, writes);
+        writes = $urandom_range(0, writes); // read a random number of the previous writes
         for (i = 0; i < writes; i++) begin
             burst_read();
         end
         $display(" case 7 - reads: %2d finished, %3d test cases left in queue", writes, tcfifo.size());
     end
-    // empty the queue to prepare for next case
-    i = tcfifo.size();
+    
     $display(" case 7 - emptying queue");
-    readAllQueue();
+    readAllQueue(); // there may be a significant number of test cases left in the queue, make sure to read them all before proceeding
   
   
 
@@ -382,7 +358,9 @@ initial begin
     $finish;
 end
 
-
+// issue a number of writes
+// input: TestCase - class that holds address, data, and burst length
+//                   burst length is used to determine the number of writes to issue
 task burst_write;
     input TestCase tc;
     int i;
@@ -399,8 +377,13 @@ task burst_write;
 
 endtask
 
+// issue a number of reads
+// input: none - instead, pop the oldest test case off the queue and use that
+//        just like a write, the test case stores the address, data, and burst length
+//        again, burst length used to determine number of reads to issue
 task burst_read();
-    automatic TestCase tc = tcfifo.pop_front();
+    //automatic TestCase tc = tcfifo.pop_front();
+    automatic TestCase tc = tcfifo.pop_back();
     logic [31:0] data, d;
     int i;
     
@@ -418,16 +401,19 @@ task burst_read();
 
 endtask
 
+// empty the queue of test cases by reading them out one by one
 task readAllQueue();
     while (tcfifo.size > 0) begin
         burst_read();
     end
 endtask
 
+// wait for reset to complete
 task waitForReset;
     @(negedge top_hdl.wbi.wb_rst_i);
 endtask
 
+// initialize the wishbone interface with what is essentially a NOP
 task wbsetup;
     top_hdl.wbi.wb_addr_i      = 0;
     top_hdl.wbi.wb_dat_i       = 0;
