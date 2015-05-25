@@ -6,7 +6,9 @@ interface sdr_bus #(
   parameter TRAS         = 1, // Activate to Precharge Delay
   parameter TCAS         = 1, // CAS Delay
   parameter TRCD         = 1, // Ras to Cas Delay
-  parameter TRP          = 1  // Precharge Command Period
+  parameter TRP          = 1, // Precharge Command Period
+  parameter TWR          = 1, // Write Recover Time
+  parameter VERBOSE      = 1
 )(
   input logic sdram_clk,          // SDRAM Clock
   input logic sdram_clk_d,        // Delayed clock
@@ -114,17 +116,29 @@ interface sdr_bus #(
   assign cmd_idle  = (cmd_nop | cmd === CMD_ACTIVE | cmd === CMD_AUTO_REFRESH | cmd === CMD_LOAD_MODE_REGISTER | cmd === CMD_PRECHARGE);
   assign cmd_act   = (cmd_nop | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
   assign cmd_xfr   = (cmd_act | cmd === CMD_BURST_TERMINATE);
+  bit crossBankLegalCommand;
+  assign crossBankLegalCommand = (cmd_nop | cmd === CMD_ACTIVE | cmd === CMD_READ | cmd === CMD_WRITE | cmd === CMD_PRECHARGE);
 
   task doCommandAssert(integer bNum, bankState_t bankState, bit cmdIsLegal);
     begin
-        assert(cmdIsLegal)
-            $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
-        else
+        assert(cmdIsLegal) begin
+            if (VERBOSE)
+              $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
+        end else
             $display("sdrc_if: BANK: %p COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
     end
   endtask
-  
 
+  task doCrossBankCommandAssert(integer banki, integer bankj, bankState_t bankiState, bit cmdIsLegal);
+    begin
+        assert(cmdIsLegal)
+        else
+          $display("sdrc_if: Bank %p In State %p, Command %p issued to bank %p FAIL", banki, bankiState, cmd, bankj);
+
+    end
+  endtask
+  
+  // Array of 4 values, one for each bank
   bankState_t bankState[0:3];
   bankState_t bankNextState[0:3];
 
@@ -135,7 +149,7 @@ interface sdr_bus #(
   integer writingCounter[0:3]    = '{0,0,0,0};
   integer prechargeCounter[0:3]  = '{0,0,0,0};
 
-  // Bank 0 FSM Sequential Logic
+  // Bank FSM Sequential Logic
   always_ff @(posedge sdram_clk) begin
     for (int i = 0; i < 4; i++) begin
         if (~sdram_resetn)
@@ -264,6 +278,7 @@ interface sdr_bus #(
   end
 
   // Validates commands are legal for each bank in each state
+  // These are for Bank N -> Bank N checks
   always@ (posedge sdram_clk) begin
     for(int i = 0; i < 4; i++) begin
         if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE)) begin
@@ -282,5 +297,63 @@ interface sdr_bus #(
         end
     end
   end
+
+  // Validates commands are legal for banks in each state
+  // These are for Bank N -> Bank M checks
+  always@ (posedge sdram_clk) begin
+    for(int i = 0; i < 4; i++) begin
+      for (int j = 0; j < 4; j++) begin
+        if (i !== j) begin
+            if (((sdr_ba === j) | (aux_cmd & cmd === CMD_PRECHARGE)) & (cmd !== CMD_BURST_TERMINATE)) begin
+                case (bankState[i])
+                    ACTIVATING:  doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    ACTIVE:      doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    RD:          doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    WR:          doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    RD_W_PC:     doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    WR_W_PC:     doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                    PRECHARGING: doCrossBankCommandAssert(i,j,bankState[i],crossBankLegalCommand);
+                endcase
+            end
+        end
+      end
+    end
+  end
+
+  // Define sequences that describe timing violations
+  // and assert that they are never observed
+  genvar k;
+  generate
+    for (k = 0; k < 4; k++) begin
+      if (TRAS > 1) begin
+        sequence trasViolation;
+            @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]
+                                 (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+          endsequence
+          assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
+      end
+      if (TRCD > 1) begin
+          sequence trcdViolation;
+            @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRCD-1]
+                                 ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
+          endsequence
+          assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
+      end
+      if (TRP > 1) begin
+          sequence trpViolation;
+            @(posedge sdram_clk) ((cmd === CMD_PRECHARGE)  & ((sdr_ba === k) | aux_cmd) & (bankState[k] !== IDLE)) ##[1:TRP-1]
+                                 ((sdr_ba === k) & (~cmd_nop));
+          endsequence
+          assert property (not trpViolation)  else $display("sdrc_if: Bank %p Trp  violation", k);
+      end
+      if (TWR > 1) begin
+          sequence twrViolation;
+            @(posedge sdram_clk) ((cmd === CMD_WRITE) & (sdr_ba === k)) ##[1:TWR-1]
+                                 (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
+          endsequence
+          assert property (not twrViolation)  else $display("sdrc_if: Bank %p Twr  violation", k);
+      end
+    end
+  endgenerate
 
 endinterface
