@@ -1,0 +1,10 @@
+ ../../rtl/core/*
+ ../../rtl/lib/*
+ ../../rtl/wb2sdrc/wb2sdrc.v
+ ../../rtl/interfaces/sdr_if.sv
+ ../../rtl/interfaces/wbinterface.sv
+ ../../rtl/interfaces/cfg_if.sv
+ ../model/mt48lc2m32b2_SYNTH.v
+ ../../rtl/core/sdrc_define.v
+ ../../rtl/top/* 
+../tb/top_hdl.sv
