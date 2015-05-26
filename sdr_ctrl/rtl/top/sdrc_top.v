@@ -122,7 +122,7 @@ wire #(1.0) sdram_pad_clk = sdram_bus.sdram_clk;
         .sdr_rd_data        (app_rd_data        ) 
     ); 
 
-    sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW)) u_sdrc_core (
+    sdrc_core #(.SDR_DW(SDR_DW) , .SDR_BW(SDR_BW), .APP_RW(APP_RW)) u_sdrc_core (
         .clk                (sdram_bus.sdram_clk    ) ,
         .pad_clk            (sdram_pad_clk          ) ,
         .reset_n            (sdram_bus.sdram_resetn ) ,
