@@ -103,16 +103,16 @@ reg [31:0] StartAddr;
 
 initial begin //{
   ErrCnt          = 0;
-   wbi.wb_addr_i      = 0;
-   wbi.wb_dat_i      = 0;
-   wbi.wb_sel_i       = 4'h0;
-   wbi.wb_we_i        = 0;
-   wbi.wb_stb_i       = 0;
-   wbi.wb_cyc_i       = 0;
+  wbi.wb_addr_i   = 0;
+  wbi.wb_dat_i    = 0;
+  wbi.wb_sel_i    = 4'h0;
+  wbi.wb_we_i     = 0;
+  wbi.wb_stb_i    = 0;
+  wbi.wb_cyc_i    = 0;
 
   RESETN    = 1'h1;
 
- #100
+  #100
   // Applying reset
   RESETN    = 1'h0;
   #10000;
@@ -121,13 +121,13 @@ initial begin //{
   #1000;
   wait(cfg.sdr_init_done === 1);
 
-  //#1000;
+  #1000;
   $display("-------------------------------------- ");
   $display(" Case-1: Single Write/Read Case        ");
   $display("-------------------------------------- ");
 
   burst_write(32'h4_0000,8'h4);  
- //#1000;
+  #1000;
   burst_read();  
 
   // Repeat one more time to analysis the 
@@ -269,15 +269,15 @@ initial begin //{
   for(k=0; k < 20; k++) begin
      StartAddr = $random & 32'h003FFFFF;
      burst_write(StartAddr,($random & 8'h0f)+1);  
- //#100;
+ #100;
 
      StartAddr = $random & 32'h003FFFFF;
      burst_write(StartAddr,($random & 8'h0f)+1);  
- //#100;
+ #100;
      burst_read();  
- //#100;
+ #100;
      burst_read();  
- //#100;
+ #100;
   end
 
   #10000;

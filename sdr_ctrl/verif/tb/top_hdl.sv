@@ -117,7 +117,7 @@ module top_hdl();
         RESETN = 1;
         #100;
         RESETN = 0; // apply reset
-        #1000;
+        #10000;
         RESETN = 1;
         #1000;
     end

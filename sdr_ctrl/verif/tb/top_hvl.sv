@@ -58,12 +58,12 @@ module top_hvl #(
 //      call 'new()' with 0s for row/bank/column then call 'setAddress(<32bit address>)'
 // data is randomized whenever 'new()' is called
 class TestCase;
-    logic [31:0] address;
-    logic [15:0] [31:0] data;
-    logic  [7:0] bl; // burst length
-    logic [19:0] row;
-    logic  [1:0] bank;
-    logic  [7:0] column;
+    logic         [31:0] address;
+    logic [255:0] [31:0] data;
+    logic          [7:0] bl; // burst length
+    logic         [19:0] row;
+    logic          [1:0] bank;
+    logic          [7:0] column;
     
     function new(logic [19:0] row, logic [1:0] bank, logic [7:0] column, logic [7:0] bl);
         this.row        = row;
@@ -90,7 +90,6 @@ class TestCase;
     endfunction
     
     function void newData();
-        //for (int i = 0; i < 8; i++) begin
         foreach (data[k]) begin
             if (k < this.bl)
                 this.data[k]       = $random & 32'hFFFFFFFF;
@@ -106,14 +105,13 @@ class TestCase;
     endfunction
     
     function void print();
-        string data, d;
-        int i;
-        for (i = 7; i >= 0; i--) begin          // pretty print prints as integers... this formats to hex for smaller prints
-            $sformat(d, "%8h", this.data[i]);
-            data = {data, ", ", d};
-        end
+        //string data, d;
+        //for (int i = 7; i >= 0; i--) begin          // pretty print prints as integers... this formats to hex for smaller prints
+        //    $sformat(d, "%8h", this.data[i]);
+        //    data = {data, ", ", d};
+        //end
         $display("Transaction - address=%h, row=%5h, bank=%1d, column=%2h, bl=%3h", this.address, this.row, this.bank, this.column, this.bl);
-        $display("Transaction - data = %s", data);
+        //$display("Transaction - data = %s", data);
     endfunction
 
 endclass
@@ -128,12 +126,94 @@ logic  [7:0] column;
 logic [31:0] address;
 logic  [7:0] bl;
 longint ErrCnt;
-int i, k, writes;
+int i, j, k, writes;
+
+
+// set up a dummy interface for assertion checking
+logic hvl_sdram_clk     = 0,
+      hvl_sdram_clk_d   = 0,
+      hvl_RESETN        = 1, // reset is active low
+      hvl_sdr_init_done = 0; // when sdr_init_done is asserted, the FSM can move
+
+sdr_bus #(.SDR_DW(top_hdl.SDR_DW),
+          .SDR_BW(top_hdl.SDR_BW),
+          .BURST_LENGTH(top_hdl.BURST_LEN),
+          .TRAS(top_hdl.TRAS_D),
+          .TCAS(top_hdl.TCAS),
+          .TRCD(top_hdl.TRCD_D),
+          .TRP(top_hdl.TRP_D)//,
+          //.VERBOSE(0)
+) sdrif_test (.sdram_clk(hvl_sdram_clk),
+             .sdram_clk_d(hvl_sdram_clk_d),
+             .sdram_resetn(hvl_RESETN),
+             .sdr_init_done(hvl_sdr_init_done)
+);
+
+import sdr_pack::*;
+int assertFailsExpected = 0;
+
+// variable to drive the dummy sdrif
+cmd_t sdrif_cmd = cmd_t'(0);
+assign {sdrif_test.sdr_cs_n, sdrif_test.sdr_ras_n, sdrif_test.sdr_cas_n, sdrif_test.sdr_we_n} = sdrif_cmd;
+
+// generate dummy interface clocks
+always #(top_hdl.P_SDR/2) hvl_sdram_clk = ~hvl_sdram_clk;
+
+// list of valid commands for each state
+cmd_t validCommands[bankState_t][$];
+cmd_t commands [$];
+initial begin
+    commands.push_back(CMD_NOP);
+    commands.push_back(CMD_ACTIVE);
+    commands.push_back(CMD_AUTO_REFRESH);
+    commands.push_back(CMD_LOAD_MODE_REGISTER);
+    commands.push_back(CMD_PRECHARGE);
+    validCommands[IDLE] = commands;
+    commands = {};
+    
+    commands.push_back(CMD_NOP);
+    validCommands[REFRESHING] = commands;
+    validCommands[ACTIVATING] = commands;
+    validCommands[RD_W_PC] = commands;
+    validCommands[WR_W_PC] = commands;
+    validCommands[PRECHARGING] = commands;
+    commands = {};
+    
+    commands.push_back(CMD_NOP);
+    commands.push_back(CMD_READ);
+    commands.push_back(CMD_WRITE);
+    commands.push_back(CMD_PRECHARGE);
+    validCommands[ACTIVE] = commands;
+    
+    commands.push_back(CMD_BURST_TERMINATE);
+    validCommands[RD] = commands;
+    validCommands[WR] = commands;
+    commands = {};
+    
+    validCommands[INITIALIZING] = commands;
+    
+    $display("validCommands = %p", validCommands);
+end
+
+
+
+
+
+
+
+
+
+
 
 // Initialize Configuration Parameters and HVL<->HDL interface 
 initial begin
     top_hdl.cfg.setup();
     wbsetup();
+end
+
+// initialize the sdrif for breaking assertions
+initial begin
+    sdrif_reset();
 end
 
 /////////////////////////////////////////////////////////////////////////
@@ -142,7 +222,6 @@ end
 initial begin
     
     $display("Waiting for reset");
-    //top_hdl.wbi.waitForReset();
     waitForReset();
     $display("Reset finished");
     
@@ -319,6 +398,7 @@ initial begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             t = new(0,0,0,($random & 8'h0f)+1);
+            //t = new(0,0,0,$urandom_range(1,8) & 8'h0F);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
@@ -332,7 +412,10 @@ initial begin
     for(k = 0; k < $urandom_range(0, 20); k++) begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
+            j = ($random & 8'h0f)+1;
+            $display("J = %d", j);
             t = new(0,0,0,($random & 8'h0f)+1);
+            //t = new(0,0,0,$urandom_range(1,8) & 8'h0F);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
@@ -350,13 +433,39 @@ initial begin
   
 
     $display("###############################");
-    if(ErrCnt == 0)
+    if (ErrCnt == 0)
         $display("STATUS: SDRAM Write/Read TEST PASSED");
     else
         $display("ERROR:  SDRAM Write/Read TEST FAILED");
     $display("###############################");
+    if (top_hdl.sdram_bus.assertFailCount == 0)
+        $display("ASSERTIONS: ALL PASSED");
+    else
+        $display("ASSERTIONS: %d FAILED", top_hdl.sdram_bus.assertFailCount);
+    $display("###############################");
+    
+    top_hdl.sdram_bus.VERBOSE = 0; // turn off prints from the bus used in top_hdl
+    
+    $display("\n\n###############################");
+    $display("Testing dummy interface to break assertions");
+    $display("###############################");
+    sdrif_test.sdr_fsm_en = 0;
+    sdrif_break();
+    
+    $display("###############################");
+    if (sdrif_test.assertFailCount == assertFailsExpected)
+        $display("ASSERTIONS: %d FAILED of an expected %d, success!", sdrif_test.assertFailCount, assertFailsExpected);
+    else
+        $display("ASSERTIONS: %d FAILED of an expected %d, failure!", sdrif_test.assertFailCount, assertFailsExpected);
+    $display("###############################");
+    
     $finish;
 end
+
+
+
+
+
 
 // issue a number of writes
 // input: TestCase - class that holds address, data, and burst length
@@ -371,7 +480,7 @@ task burst_write;
     
     for(i = 0; i < tc.getBL(); i++) begin
         d = tc.getData()[i];
-        $display("tb_top:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ", i, tc.getAddress()[31:2]+i, d);
+        $display("top_hvl:  Status: Burst-No: %d  Write Address: %x  WriteData: %x ", i, tc.getAddress()[31:2]+i, d);
         top_hdl.wbi.write(tc.getAddress()[31:2]+i, tc.getBL(), d);
     end
 
@@ -382,28 +491,29 @@ endtask
 //        just like a write, the test case stores the address, data, and burst length
 //        again, burst length used to determine number of reads to issue
 task burst_read();
-    //automatic TestCase tc = tcfifo.pop_front();
     automatic TestCase tc = tcfifo.pop_back();
     logic [31:0] data, d;
     int i;
     
+    $display("top_hvl:  Read Address: %x, Burst Size: %d", tc.getAddress(), tc.getBL());
     for(i = 0; i < tc.getBL(); i++) begin
-        $display("tb_top:  Read Address: %x, Burst Size: %d", tc.getAddress(), tc.getBL());
         top_hdl.wbi.read(tc.getAddress()[31:2]+i, tc.getBL(), data);
         d = tc.getData()[i];
         if (data !== d) begin
-            $display("tb_top:  READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x", i, tc.getAddress()[31:2]+i, data, d);
+            $display("top_hvl:  READ ERROR: Burst-No: %d Addr: %x Rxp: %x Exd: %x", i, tc.getAddress()[31:2]+i, data, d);
             ErrCnt = ErrCnt+1;
         end else begin
-            $display("tb_top:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x", i, tc.getAddress()[31:2]+i, data);
+            $display("top_hvl:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x", i, tc.getAddress()[31:2]+i, data);
         end
     end
 
 endtask
 
 // empty the queue of test cases by reading them out one by one
-task readAllQueue();
+task readAllQueue;
+    #100;
     while (tcfifo.size > 0) begin
+        #100;
         burst_read();
     end
 endtask
@@ -422,6 +532,81 @@ task wbsetup;
     top_hdl.wbi.wb_stb_i       = 0;
     top_hdl.wbi.wb_cyc_i       = 0;
 endtask
+
+
+
+
+
+
+
+// tasks for testing the interface
+
+
+
+task sdrif_reset;
+    sdrif_off();
+    #(100);
+    sdrif_on();
+    #(100);
+endtask
+
+task sdrif_off;
+    hvl_RESETN <= 0;
+    hvl_sdr_init_done <= 0;
+endtask
+
+task sdrif_on;
+    hvl_RESETN <= 1;
+    hvl_sdr_init_done <= 1;
+endtask
+
+// loop through the possible states and break the assertions associated with that state 
+task sdrif_break;
+    automatic cmd_t command = cmd_t'(0);
+    automatic bankState_t state [3:0];
+    // to begin, force all banks into IDLE state
+    sdrif_reset();
+    for (int i = 0; i < 4; i++) begin
+        state[i] = IDLE;
+    end
+    
+    // loop through banks
+    for (int i = 0; i < 4; i++) begin
+        while (state[i] <= PRECHARGING) begin
+            sdrif_test.sdr_ba = i;  // assert bank enable for that bank
+            for (int j = 0; j < 8; j++) begin
+                sdrif_setcmd(command, state[i]);
+                command = cmd_t'(command + 1);
+            end
+            state[i] = bankState_t'(state[i]+1);
+            command = cmd_t'(0);
+            $display("bank %1d next state: ", i, state[i].name);
+        end
+    end
+endtask
+
+task sdrif_setcmd(cmd_t cmd, bankState_t bs);
+    automatic logic valid = 0;
+    automatic logic [3:0] vc [$] = validCommands[bs];
+    $display("top_hvl: Testing %s for state %s", cmd.name, bs.name);
+    
+    @(posedge hvl_sdram_clk);
+    sdrif_test.bankState[i] = bs;
+    sdrif_cmd = cmd;
+    @(negedge hvl_sdram_clk);
+    foreach (vc[i]) begin
+        if (cmd === vc[i]) begin
+            valid = 1;
+        end
+    end
+    if (~valid) begin
+        assertFailsExpected++;
+        $display("top_hvl: Expecting a failure for %s in state %s", cmd.name, bs.name);
+    end
+endtask
+
+
+
 
 endmodule
 

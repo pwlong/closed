@@ -1,3 +1,4 @@
+`include "sdr_pack.sv"
 interface sdr_bus #(
   parameter  SDR_DW   = 16,         // SDRAM Data Width 
   parameter  SDR_BW   = 2,          // SDRAM Byte Width
@@ -7,8 +8,8 @@ interface sdr_bus #(
   parameter TCAS         = 1, // CAS Delay
   parameter TRCD         = 1, // Ras to Cas Delay
   parameter TRP          = 1, // Precharge Command Period
-  parameter TWR          = 1, // Write Recover Time
-  parameter VERBOSE      = 1
+  parameter TWR          = 1//, // Write Recover Time
+  //parameter VERBOSE      = 1
 )(
   input logic sdram_clk,          // SDRAM Clock
   input logic sdram_clk_d,        // Delayed clock
@@ -27,6 +28,8 @@ interface sdr_bus #(
   logic [SDR_DW-1:0]  sdr_din;     // SDRAM Data Input
   logic [SDR_DW-1:0]  sdr_dout;    // SDRAM Data Output
   logic [SDR_BW-1:0]  sdr_den_n;   // SDRAM Data Output enable
+  logic VERBOSE = 1;
+  logic sdr_fsm_en = 1;
 
   // Tristate logic for the din/dout pins on the core
   assign   sdr_dq = (&sdr_den_n == 1'b0) ? sdr_dout :  {SDR_DW{1'bz}};
@@ -76,29 +79,7 @@ interface sdr_bus #(
     input sdram_resetn
   );
   
-  typedef enum logic [3:0] {
-   INITIALIZING, IDLE, REFRESHING, ACTIVATING, ACTIVE, RD, RD_W_PC, WR, WR_W_PC, PRECHARGING
-  } bankState_t;
-
-  // commands in table 14, page 25 of dram datasheet
-  typedef enum bit [3:0] {
-    CMD_LOAD_MODE_REGISTER = 4'b0000,
-    CMD_AUTO_REFRESH       = 4'b0001,
-    CMD_PRECHARGE          = 4'b0010,
-    CMD_ACTIVE             = 4'b0011,
-    CMD_WRITE              = 4'b0100,
-    CMD_READ               = 4'b0101,
-    CMD_BURST_TERMINATE    = 4'b0110,
-    CMD_NOP                = 4'b0111,
-    CMD_NOP_I              = 4'b1000,
-    CMD_NOP_II             = 4'b1001,
-    CMD_NOP_III            = 4'b1010,
-    CMD_NOP_IV             = 4'b1011,
-    CMD_NOP_V              = 4'b1100,
-    CMD_NOP_VI             = 4'b1101,
-    CMD_NOP_VII            = 4'b1110,
-    CMD_NOP_VIII           = 4'b1111
-  } cmd_t;
+  import sdr_pack::*;
   
   //Current Command
   cmd_t cmd;
@@ -106,6 +87,8 @@ interface sdr_bus #(
 
   logic aux_cmd;
   assign aux_cmd  = sdr_addr[10];
+  
+  int assertFailCount = 0;
   
   //Acceptable Commands
   bit cmd_nop;
@@ -122,18 +105,23 @@ interface sdr_bus #(
   task doCommandAssert(integer bNum, bankState_t bankState, bit cmdIsLegal);
     begin
         assert(cmdIsLegal) begin
-            if (VERBOSE)
-              $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
-        end else
+          if (VERBOSE)
+            $display("sdrc_if: BANK: %p COMMAND ASSERTION PASS - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
+        end else begin
+          if (VERBOSE)
             $display("sdrc_if: BANK: %p COMMAND ASSERTION FAIL - STATE: %p   COMMAND: %p", bNum, bankState, cmd);
+          assertFailCount++;
+        end
     end
   endtask
 
   task doCrossBankCommandAssert(integer banki, integer bankj, bankState_t bankiState, bit cmdIsLegal);
     begin
         assert(cmdIsLegal)
-        else
-          $display("sdrc_if: Bank %p In State %p, Command %p issued to bank %p FAIL", banki, bankiState, cmd, bankj);
+        else begin
+          if (VERBOSE)
+            $display("sdrc_if: Bank %p In State %p, Command %p issued to bank %p FAIL", banki, bankiState, cmd, bankj);
+        end
 
     end
   endtask
@@ -151,11 +139,13 @@ interface sdr_bus #(
 
   // Bank FSM Sequential Logic
   always_ff @(posedge sdram_clk) begin
+    if (sdr_fsm_en) begin
     for (int i = 0; i < 4; i++) begin
         if (~sdram_resetn)
             bankState[i] <= INITIALIZING;
         else
             bankState[i] <= bankNextState[i];
+    end
     end
   end
 
@@ -184,6 +174,7 @@ interface sdr_bus #(
 
   // Next State Combinational Logic
   always_comb begin
+    if (sdr_fsm_en) begin
     for (int i = 0; i < 4; i++) begin
         case(bankState[i])
             INITIALIZING :  begin
@@ -274,6 +265,7 @@ interface sdr_bus #(
                                     bankNextState[i] = PRECHARGING;
                             end
         endcase
+    end
     end
   end
 
