@@ -48,9 +48,7 @@
 
 `timescale 1ns/1ps
 
-module top_hvl #(
-)
-();
+module top_hvl #()();
 
 // class for storing and manipulating test cases
 // two ways to set the address
@@ -141,8 +139,7 @@ sdr_bus #(.SDR_DW(top_hdl.SDR_DW),
           .TRAS(top_hdl.TRAS_D),
           .TCAS(top_hdl.TCAS),
           .TRCD(top_hdl.TRCD_D),
-          .TRP(top_hdl.TRP_D)//,
-          //.VERBOSE(0)
+          .TRP(top_hdl.TRP_D)
 ) sdrif_test (.sdram_clk(hvl_sdram_clk),
              .sdram_clk_d(hvl_sdram_clk_d),
              .sdram_resetn(hvl_RESETN),
@@ -168,29 +165,33 @@ initial begin
     commands.push_back(CMD_AUTO_REFRESH);
     commands.push_back(CMD_LOAD_MODE_REGISTER);
     commands.push_back(CMD_PRECHARGE);
-    validCommands[IDLE] = commands;
+    validCommands[IDLE] = commands;         // 5 valid commands, 3 invalid
     commands = {};
     
     commands.push_back(CMD_NOP);
-    validCommands[REFRESHING] = commands;
-    validCommands[ACTIVATING] = commands;
-    validCommands[RD_W_PC] = commands;
-    validCommands[WR_W_PC] = commands;
-    validCommands[PRECHARGING] = commands;
+    validCommands[REFRESHING] = commands;   // 1 valid command,  7 invalid
+    validCommands[ACTIVATING] = commands;   // 1 valid command,  7 invalid
+    validCommands[RD_W_PC] = commands;      // 1 valid command,  7 invalid
+    validCommands[WR_W_PC] = commands;      // 1 valid command,  7 invalid
+    validCommands[PRECHARGING] = commands;  // 1 valid command,  7 invalid
     commands = {};
     
     commands.push_back(CMD_NOP);
     commands.push_back(CMD_READ);
     commands.push_back(CMD_WRITE);
     commands.push_back(CMD_PRECHARGE);
-    validCommands[ACTIVE] = commands;
+    validCommands[ACTIVE] = commands;       // 4 valid commands, 4 invalid
     
     commands.push_back(CMD_BURST_TERMINATE);
-    validCommands[RD] = commands;
-    validCommands[WR] = commands;
+    validCommands[RD] = commands;           // 5 valid commands, 3 invalid
+    validCommands[WR] = commands;           // 5 valid commands, 3 invalid
     commands = {};
     
-    validCommands[INITIALIZING] = commands;
+    validCommands[INITIALIZING] = commands; // 0 valid commands, 8 invalid
+    
+    // (3+7+7+7+7+7+4+3+3+8)*4 = 224 invalid commands
+    // (5+1+1+1+1+1+4+5+5+0)*4 =  96   valid commands
+    // total of 320 commands across all four banks
     
     $display("validCommands = %p", validCommands);
 end
@@ -258,6 +259,7 @@ initial begin
     t = new(0,0,0,bl);
     t.setAddress(32'h0000_0FF0);
     burst_write(t);
+    
     // call new in between each write in order to regenerate data
     bl = 8'hF;
     t = new(0,0,0,bl);
@@ -398,7 +400,6 @@ initial begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             t = new(0,0,0,($random & 8'h0f)+1);
-            //t = new(0,0,0,$urandom_range(1,8) & 8'h0F);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
@@ -415,7 +416,6 @@ initial begin
             j = ($random & 8'h0f)+1;
             $display("J = %d", j);
             t = new(0,0,0,($random & 8'h0f)+1);
-            //t = new(0,0,0,$urandom_range(1,8) & 8'h0F);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
         end
@@ -449,6 +449,7 @@ initial begin
     $display("\n\n###############################");
     $display("Testing dummy interface to break assertions");
     $display("###############################");
+    sdrif_test.VERBOSE = 0; // turn off prints from the bus used in top_hdl
     sdrif_test.sdr_fsm_en = 0;
     sdrif_break();
     
@@ -540,9 +541,6 @@ endtask
 
 
 // tasks for testing the interface
-
-
-
 task sdrif_reset;
     sdrif_off();
     #(100);
@@ -564,6 +562,7 @@ endtask
 task sdrif_break;
     automatic cmd_t command = cmd_t'(0);
     automatic bankState_t state [3:0];
+    
     // to begin, force all banks into IDLE state
     sdrif_reset();
     for (int i = 0; i < 4; i++) begin
@@ -575,33 +574,32 @@ task sdrif_break;
         while (state[i] <= PRECHARGING) begin
             sdrif_test.sdr_ba = i;  // assert bank enable for that bank
             for (int j = 0; j < 8; j++) begin
-                sdrif_setcmd(command, state[i]);
+                sdrif_setcmd(command, state[i], i);
                 command = cmd_t'(command + 1);
             end
             state[i] = bankState_t'(state[i]+1);
             command = cmd_t'(0);
-            $display("bank %1d next state: ", i, state[i].name);
         end
     end
 endtask
 
-task sdrif_setcmd(cmd_t cmd, bankState_t bs);
+task sdrif_setcmd(cmd_t cmd, bankState_t bs, int bank);
     automatic logic valid = 0;
     automatic logic [3:0] vc [$] = validCommands[bs];
     $display("top_hvl: Testing %s for state %s", cmd.name, bs.name);
     
     @(posedge hvl_sdram_clk);
-    sdrif_test.bankState[i] = bs;
+    sdrif_test.bankState[bank] = bs;
     sdrif_cmd = cmd;
+    
     @(negedge hvl_sdram_clk);
-    foreach (vc[i]) begin
-        if (cmd === vc[i]) begin
+    foreach (vc[bank]) begin
+        if (cmd === vc[bank]) begin
             valid = 1;
         end
     end
     if (~valid) begin
         assertFailsExpected++;
-        $display("top_hvl: Expecting a failure for %s in state %s", cmd.name, bs.name);
     end
 endtask
 
