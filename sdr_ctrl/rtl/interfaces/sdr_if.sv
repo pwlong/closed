@@ -164,8 +164,20 @@ interface sdr_bus #(
   always_ff @(posedge sdram_clk) begin
     if (sdr_fsm_en) begin
     for (int i = 0; i < 4; i++) begin
-        if (~sdram_resetn)
+        if (~sdram_resetn) begin
             bankState[i] <= INITIALIZING;
+            unique case (bankNextState[i])
+              IDLE:        idleCount[i]        <= '0;
+              REFRESHING:  refreshingCount[i]  <= '0;
+              ACTIVE:      activeCount[i]      <= '0;
+              ACTIVATING:  activatingCount[i]  <= '0;
+              WR:          wrCount[i]          <= '0;
+              RD:          rdCount[i]          <= '0;
+              WR_W_PC:     wrwpcCount[i]       <= '0;
+              RD_W_PC:     rdwpcCount[i]       <= '0;
+              PRECHARGING: prechargingCount[i] <= '0;
+            endcase
+        end
         else begin
             if (bankNextState[i] !== bankState[i]) begin
                 unique case (bankNextState[i])

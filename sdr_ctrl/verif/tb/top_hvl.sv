@@ -441,7 +441,7 @@ initial begin
     
     $display("SDRAM state counts for each bank:");
     for (int b = 0; b < 4; b++) begin
-        $display("========Bank %1d========", b);
+        $display("====== Bank %1d ======", b);
         $display("%d idle count", top_hdl.sdram_bus.idleCount[b]);
         $display("%d activating count", top_hdl.sdram_bus.activatingCount[b]);
         $display("%d active count", top_hdl.sdram_bus.activeCount[b]);
