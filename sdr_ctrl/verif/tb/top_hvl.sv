@@ -438,6 +438,21 @@ initial begin
     else
         $display("ERROR:  SDRAM Write/Read TEST FAILED");
     $display("###############################");
+    
+    $display("SDRAM state counts for each bank:");
+    for (int b = 0; b < 4; b++) begin
+        $display("========Bank %1d========", b);
+        $display("%d idle count", top_hdl.sdram_bus.idleCount[b]);
+        $display("%d activating count", top_hdl.sdram_bus.activatingCount[b]);
+        $display("%d active count", top_hdl.sdram_bus.activeCount[b]);
+        $display("%d refreshing count", top_hdl.sdram_bus.refreshingCount[b]);
+        $display("%d wr count", top_hdl.sdram_bus.wrCount[b]);
+        $display("%d wr_w_pc count", top_hdl.sdram_bus.wrwpcCount[b]);
+        $display("%d rd count", top_hdl.sdram_bus.rdCount[b]);
+        $display("%d rd_w_pc count", top_hdl.sdram_bus.rdwpcCount[b]);
+        $display("%d precharging count", top_hdl.sdram_bus.prechargingCount[b]);
+    end
+    $display("###############################");
     if (top_hdl.sdram_bus.assertFailCount == 0)
         $display("ASSERTIONS: ALL PASSED");
     else
@@ -445,6 +460,10 @@ initial begin
     $display("###############################");
     
     top_hdl.sdram_bus.VERBOSE = 0; // turn off prints from the bus used in top_hdl
+    
+    // ---------------------------------------------
+    // Begin Assertion Testing on dummy SDRAM interface
+    // ---------------------------------------------
     
     $display("\n\n###############################");
     $display("Testing dummy interface to break assertions");
