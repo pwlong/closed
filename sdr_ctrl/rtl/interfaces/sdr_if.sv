@@ -246,7 +246,7 @@ interface sdr_bus #(
             IDLE         :  begin
                                 if((cmd === CMD_ACTIVE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVATING;
-                                else if (cmd === CMD_AUTO_REFRESH)
+                                else if (cmd === CMD_AUTO_REFRESH | (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = REFRESHING;
                                 else
                                     bankNextState[i] = IDLE;
@@ -333,7 +333,7 @@ interface sdr_bus #(
   // These are for Bank N -> Bank N checks
   always@ (posedge sdram_clk) begin
     for(int i = 0; i < 4; i++) begin
-        if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE) | (cmd === CMD_AUTO_REFRESH)) begin
+        if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE) | ((cmd === CMD_AUTO_REFRESH) (sdr_ba === i | aux_cmd))) begin
             case (bankState[i])
                 INITIALIZING:$display("sdrc_if: Init State");
                 IDLE:        doCommandAssert(i, bankState[i], cmd_idle);
