@@ -571,7 +571,6 @@ task burst_read();
             $display("top_hvl:  READ STATUS: Burst-No: %d Addr: %x Rxd: %x", i, tc.getAddress()[31:2]+i, data);
         end
     end
-
 endtask
 
 // empty the queue of test cases by reading them out one by one

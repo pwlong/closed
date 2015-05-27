@@ -143,7 +143,7 @@ interface sdr_bus #(
   
   // track the number of times each state was entered
   integer        idleCount[0:3] = '{0,0,0,0};
-  //integer        initCount[0:3] = '{0,0,0,0};
+  integer        initCount[0:3] = '{0,0,0,0};
   integer  activatingCount[0:3] = '{0,0,0,0};
   integer      activeCount[0:3] = '{0,0,0,0};
   integer  refreshingCount[0:3] = '{0,0,0,0};
@@ -180,6 +180,7 @@ interface sdr_bus #(
               WR_W_PC:     wrwpcCount[i]       <= '0;
               RD_W_PC:     rdwpcCount[i]       <= '0;
               PRECHARGING: prechargingCount[i] <= '0;
+              INITIALIZING:initCount[i]        <= '0;
             endcase
             
             trasViolationCount[i] <= '0;
@@ -199,6 +200,7 @@ interface sdr_bus #(
                   WR_W_PC:     wrwpcCount[i]       <= wrwpcCount[i] + 1;
                   RD_W_PC:     rdwpcCount[i]       <= rdwpcCount[i] + 1;
                   PRECHARGING: prechargingCount[i] <= prechargingCount[i] + 1;
+                  INITIALIZING:initCount[i]        <= initCount[i] + 1;
                 endcase
             end
             bankState[i] <= bankNextState[i];
