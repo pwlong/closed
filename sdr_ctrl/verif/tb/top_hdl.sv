@@ -44,6 +44,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
              .wb_rst_i(!RESETN),
              .wb_sdram_clk_i(sdram_clk)
     );
+
     cfg_if #(.SDR_REFRESH_TIMER_W(`SDR_RFSH_TIMER_W),
              .SDR_REFRESH_ROW_CNT_W(`SDR_RFSH_ROW_CNT_W),
              .CFG_SDR_WIDTH(CFG_SDR_WIDTH),
@@ -56,6 +57,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
              .TRCAR_D(TRCAR_D),
              .BURST_LEN(BURST_LEN)
     ) cfg();
+
     sdr_bus #(.SDR_DW(SDR_DW),
               .SDR_BW(SDR_BW),
               .BURST_LENGTH(BURST_LEN),
@@ -75,11 +77,11 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
         .SDR_BW(SDR_BW)
     ) u_dut (
         // wishbone interface
-        .wbi,
+        wbi.master,
         // sdram interface
-        .sdram_bus,
+        sdram_bus,
         // configuration bus
-        .cfg
+        cfg.slave
     );
 
     // DIMM MODEL
@@ -123,7 +125,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
         #1000;
     end
         
-/* PWL testing gettinmg veloce running
+/* PWL testing getting veloce running
    initial begin
        wbi.wb_addr_i      = 0;
        wbi.wb_dat_i       = 0;

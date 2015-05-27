@@ -133,13 +133,13 @@ logic hvl_sdram_clk     = 0,
       hvl_RESETN        = 1, // reset is active low
       hvl_sdr_init_done = 0; // when sdr_init_done is asserted, the FSM can move
 
-sdr_bus #(.SDR_DW(top_hdl.SDR_DW),
-          .SDR_BW(top_hdl.SDR_BW),
-          .BURST_LENGTH(top_hdl.BURST_LEN),
-          .TRAS(top_hdl.TRAS_D),
-          .TCAS(top_hdl.TCAS),
-          .TRCD(top_hdl.TRCD_D),
-          .TRP(top_hdl.TRP_D)
+sdr_bus #(.SDR_DW(32/*top_hdl.SDR_DW*/),
+          .SDR_BW(16/*top_hdl.SDR_BW*/),
+          .BURST_LENGTH(1/*top_hdl.BURST_LEN*/),
+          .TRAS(4/*top_hdl.TRAS_D*/),
+          .TCAS(3/*top_hdl.TCAS*/),
+          .TRCD(2/*top_hdl.TRCD_D*/),
+          .TRP(2/*top_hdl.TRP_D*/)
 ) sdrif_test (.sdram_clk(hvl_sdram_clk),
              .sdram_clk_d(hvl_sdram_clk_d),
              .sdram_resetn(hvl_RESETN),
