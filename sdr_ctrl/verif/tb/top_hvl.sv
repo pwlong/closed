@@ -221,7 +221,7 @@ end
 // Test Case
 /////////////////////////////////////////////////////////////////////////
 initial begin
-    
+    //top_hdl.sdram_bus.VERBOSE = 0; // turn off prints from the bus used in top_hdl
     $display("Waiting for reset");
     waitForReset();
     $display("Reset finished");

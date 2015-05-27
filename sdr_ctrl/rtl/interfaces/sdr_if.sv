@@ -151,13 +151,37 @@ interface sdr_bus #(
 
 
   // Bank FSM Sequential Logic
-  always_ff @(posedge sdram_clk) begin
+  /*always_ff @(posedge sdram_clk) begin
     if (sdr_fsm_en) begin
     for (int i = 0; i < 4; i++) begin
         if (~sdram_resetn)
             bankState[i] <= INITIALIZING;
         else
             bankState[i] <= bankNextState[i];
+    end
+    end
+  end*/
+  always_ff @(posedge sdram_clk) begin
+    if (sdr_fsm_en) begin
+    for (int i = 0; i < 4; i++) begin
+        if (~sdram_resetn)
+            bankState[i] <= INITIALIZING;
+        else begin
+            if (bankNextState[i] !== bankState[i]) begin
+                unique case (bankNextState[i])
+                  IDLE:        idleCount[i]        <= idleCount[i] + 1;
+                  REFRESHING:  refreshingCount[i]  <= refreshingCount[i] + 1;
+                  ACTIVE:      activeCount[i]      <= activeCount[i] + 1;
+                  ACTIVATING:  activatingCount[i]  <= activatingCount[i] + 1;
+                  WR:          wrCount[i]          <= wrCount[i] + 1;
+                  RD:          rdCount[i]          <= rdCount[i] + 1;
+                  WR_W_PC:     wrwpcCount[i]       <= wrwpcCount[i] + 1;
+                  RD_W_PC:     rdwpcCount[i]       <= rdwpcCount[i] + 1;
+                  PRECHARGING: prechargingCount[i] <= prechargingCount[i] + 1;
+                endcase
+            end
+            bankState[i] <= bankNextState[i];
+        end
     end
     end
   end
@@ -191,22 +215,16 @@ interface sdr_bus #(
     for (int i = 0; i < 4; i++) begin
         case(bankState[i])
             INITIALIZING :  begin
-                                if(sdr_init_done) begin
+                                if(sdr_init_done)
                                     bankNextState[i] = IDLE;
-                                    idleCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = INITIALIZING;
                             end
             IDLE         :  begin
-                                if((cmd === CMD_ACTIVE) & (sdr_ba === i)) begin
+                                if((cmd === CMD_ACTIVE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVATING;
-                                    activatingCount[i]++;
-                                end
-                                else if ((cmd === CMD_AUTO_REFRESH) & (sdr_ba === i)) begin
+                                else if ((cmd === CMD_AUTO_REFRESH) & (sdr_ba === i))
                                     bankNextState[i] = REFRESHING;
-                                    refreshingCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = IDLE;
                             end
@@ -214,110 +232,72 @@ interface sdr_bus #(
                                 bankNextState[i] = IDLE;
                             end
             ACTIVATING   :  begin
-                                if (activatingCounter[i] >= TRCD-1) begin
+                                if (activatingCounter[i] >= TRCD-1)
                                     bankNextState[i] = ACTIVE;
-                                    activeCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = ACTIVATING;
                             end
             ACTIVE       :  begin
-                                if     ((cmd === CMD_WRITE)     & (sdr_ba === i)) begin
-                                    if (aux_cmd) begin
+                                if     ((cmd === CMD_WRITE)     & (sdr_ba === i))
+                                    if (aux_cmd)
                                         bankNextState[i] = WR_W_PC;
-                                        wrwpcCount[i]++;
-                                    end
-                                    else begin
+                                    else
                                         bankNextState[i] = WR;
-                                        wrCount[i]++;
-                                    end
-                                end
-                                else if((cmd === CMD_READ)      & (sdr_ba === i)) begin
-                                    if (aux_cmd) begin
+                                else if((cmd === CMD_READ)      & (sdr_ba === i))
+                                    if (aux_cmd)
                                         bankNextState[i] = RD_W_PC;
-                                        rdwpcCount[i]++;
-                                    end
-                                    else begin
+                                    else
                                         bankNextState[i] = RD;
-                                        rdCount[i]++;
-                                    end
-                                end
-                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd)) begin
+                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = PRECHARGING;
-                                    prechargingCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = ACTIVE;
                             end
             RD           :  begin
-                                if     ((cmd === CMD_WRITE)     & (sdr_ba === i)) begin
+                                if     ((cmd === CMD_WRITE)     & (sdr_ba === i))
                                     bankNextState[i] = WR;
-                                    wrCount[i]++;
-                                end
                                 else if((cmd === CMD_READ)      & (sdr_ba === i))
                                     bankNextState[i] = RD;
-                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd)) begin
+                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = PRECHARGING;
-                                    prechargingCount[i]++;
-                                end
-                                else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === i)) begin
+                                else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVE;
-                                    activeCount[i]++;
-                                end
-                                else begin
-                                    if (readingCounter[i] >= BURST_LENGTH - 1) begin
+                                else
+                                    if (readingCounter[i] >= BURST_LENGTH - 1)
                                         bankNextState[i] = ACTIVE;
-                                        activeCount[i]++;
-                                    end
                                     else
                                         bankNextState[i] = RD;
-                                end
                             end
             RD_W_PC      :  begin
-                               if (readingCounter[i] >= BURST_LENGTH - 1) begin
+                               if (readingCounter[i] >= BURST_LENGTH - 1)
                                    bankNextState[i] = PRECHARGING;
-                                   prechargingCount[i]++;
-                               end
                                else
                                    bankNextState[i] = RD_W_PC;
                             end
             WR           :  begin
                                 if     ((cmd === CMD_WRITE)     & (sdr_ba === i))
                                     bankNextState[i] = WR;
-                                else if((cmd === CMD_READ)      & (sdr_ba === i)) begin
+                                else if((cmd === CMD_READ)      & (sdr_ba === i))
                                     bankNextState[i] = RD;
-                                    rdCount[i]++;
-                                end
-                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd)) begin
+                                else if((cmd === CMD_PRECHARGE) & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = PRECHARGING;
-                                    prechargingCount[i]++;
-                                end
-                                else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === i)) begin
+                                else if((cmd === CMD_BURST_TERMINATE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVE;
-                                    activeCount[i]++;
-                                end
-                                else begin
-                                    if (writingCounter[i] >= BURST_LENGTH - 1) begin
+                                else
+                                    if (writingCounter[i] >= BURST_LENGTH - 1)
                                         bankNextState[i] = ACTIVE;
-                                        activeCount[i]++;
-                                    end
                                     else
                                         bankNextState[i] = WR;
-                                end
                             end
             WR_W_PC      :  begin
-                                if (writingCounter[i] >= BURST_LENGTH - 1) begin
+                                if (writingCounter[i] >= BURST_LENGTH - 1)
                                     bankNextState[i] = PRECHARGING;
-                                    prechargingCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = WR_W_PC;
                             end
             PRECHARGING  :  begin
-                                if (prechargeCounter[i] >= TRP - 1) begin
+                                if (prechargeCounter[i] >= TRP - 1)
                                     bankNextState[i] = IDLE;
-                                    idleCount[i]++;
-                                end
                                 else
                                     bankNextState[i] = PRECHARGING;
                             end
