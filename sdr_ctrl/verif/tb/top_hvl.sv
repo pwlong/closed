@@ -139,7 +139,8 @@ sdr_bus #(.SDR_DW(top_hdl.SDR_DW),
           .TRAS(top_hdl.TRAS_D),
           .TCAS(top_hdl.TCAS),
           .TRCD(top_hdl.TRCD_D),
-          .TRP(top_hdl.TRP_D)
+          .TRP(top_hdl.TRP_D),
+          .TWR(top_hdl.TWR)
 ) sdrif_test (.sdram_clk(hvl_sdram_clk),
              .sdram_clk_d(hvl_sdram_clk_d),
              .sdram_resetn(hvl_RESETN),
@@ -400,7 +401,7 @@ initial begin
     $display("---------------------------------------------------");
     $display(" Case-6: 20 loops of random numbers of random address/data write of random burst lengths and the same number of reads");
     $display("---------------------------------------------------");
-    for(k = 0; k < 20; k++) begin
+    for(k = 0; k < 50; k++) begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             t = new(0,0,0,($random & 8'h0f)+1);
@@ -414,7 +415,7 @@ initial begin
     $display("---------------------------------------------------");
     $display(" Case-7: Same as before but randomizing the number of reads done between writes");
     $display("---------------------------------------------------");
-    for(k = 0; k < $urandom_range(0, 20); k++) begin
+    for(k = 0; k < $urandom_range(20, 50); k++) begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             j = ($random & 8'h0f)+1;
@@ -510,6 +511,21 @@ initial begin
     
     $finish;
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -803,7 +819,7 @@ task sdrif_trp(integer bank);
         sdrif_cmd = CMD_WRITE;
         @(posedge hvl_sdram_clk);
         sdrif_cmd = CMD_NOP;
-        @(posedge hvl_sdram_clk);
+        repeat (top_hdl.TWR) @(posedge hvl_sdram_clk); // need to repeat the NOP for TWR cycles to not accidentally fail TWR
         
         if (clks < minClocks)
             trpAssertFailsExpected[bank]++;
