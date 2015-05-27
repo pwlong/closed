@@ -28,9 +28,9 @@ interface wishbone_interface(
                     input  wb_ack_o,
                     input  wb_clk_i,
                     input  wb_rst_i,
-                    input  wb_dat_o,
-                    task   read(),
-                    task   write() );
+                    input  wb_dat_o);
+                    //task   read(),
+                    //task   write() );
 
     modport slave(  input  wb_stb_i,
                     input  wb_addr_i,
@@ -44,7 +44,7 @@ interface wishbone_interface(
                     output wb_ack_o,
                     output wb_dat_o );
 
-    task write;
+    task write; // pragma tbx xtf
       input [31:0] Address;
       input [7:0]  bl;
       input [31:0] data;
@@ -60,7 +60,8 @@ interface wishbone_interface(
          wb_dat_i        <= data;
 
          do begin
-             @ (posedge wb_clk_i);
+            @ (negedge wb_clk_i); 
+	    //@ (posedge wb_clk_i);
          end while(wb_ack_o == 1'b0);
          @ (negedge wb_clk_i);
          //@ (posedge wb_clk_i);
@@ -73,7 +74,7 @@ interface wishbone_interface(
       end
     endtask
     
-    task read;
+    task read; //pragma tbx xtf
       input [31:0] Address;
       input [7:0] bl;
       output [31:0] data;
@@ -87,11 +88,10 @@ interface wishbone_interface(
          wb_addr_i       <= Address;
 
          do begin
-             @ (posedge wb_clk_i);
-             //@ (negedge wb_clk_i);
+             @ (negedge wb_clk_i);
          end while(wb_ack_o == 1'b0);
          data = wb_dat_o;
-         @ (negedge wb_sdram_clk_i);
+         @ (negedge wb_clk_i);
          //@ (posedge wb_sdram_clk_i);
          wb_stb_i        <= 0;
          wb_cyc_i        <= 0;

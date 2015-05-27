@@ -1,4 +1,5 @@
 interface cfg_if ();
+// pragma attribute cfg_if partition_interface_xif
    
     parameter SDR_REFRESH_TIMER_W   = 1;
     parameter SDR_REFRESH_ROW_CNT_W = 1;
@@ -28,13 +29,6 @@ interface cfg_if ();
     wire sdr_init_done;
     
     
-    //--------------------
-    // data/address/burst length FIFO
-    //--------------------
-    int dfifo[$]; // data fifo
-    int afifo[$]; // address  fifo
-    int bfifo[$]; // Burst Length fifo
-
     modport master (
         output cfg_sdr_width       ,
         output cfg_colbits         ,
@@ -49,9 +43,8 @@ interface cfg_if ();
         output cfg_sdr_twr_d       ,
         output cfg_sdr_rfsh        ,
         output cfg_sdr_rfmax       ,
-        input  sdr_init_done       ,
-        task setup()
-    );
+        input  sdr_init_done       );
+        //task setup()              );
 
     modport slave (
         input  cfg_sdr_width       ,
@@ -71,7 +64,7 @@ interface cfg_if ();
     );
     
     
-    task setup();
+    task setup(); // pragma tbx xtf
       cfg_sdr_width    <= CFG_SDR_WIDTH;
       cfg_colbits      <= CFG_COLBITS  ;
       cfg_sdr_mode_reg[2:0]   <= BURST_LEN;  // Burst Length

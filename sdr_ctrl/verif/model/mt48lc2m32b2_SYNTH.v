@@ -29,7 +29,7 @@
 *
 * Rev  Author          Date        Changes
 * ---  --------------------------  ---------------------------------------
-* 3.0  DJF             5/21/2015   - I fucked shit up so hard, i don't know if that's a face, or a horse hoof. This may or may not synthesize..my hope it that it will, and is not broken.
+* 3.0  DJF             5/21/2015   - I ****** **** up so hard, i don't know if that's a face, or a horse hoof. This may or may not synthesize..my hope it that it will, and is not broken.
 *
 * 2.1  SH              06/06/2002  - Typo in bank multiplex
 *      Micron Technology Inc.
@@ -182,9 +182,18 @@ module mt48lc2m32b2 (
             Sys_clk = CkeZ;
             CkeZ = Cke;
         end
-        @ (negedge Clk) begin
-            Sys_clk = 1'b0;
-        end
+       // @ (negedge Clk) begin
+       //     Sys_clk = 1'b0;
+       // end
+    end
+
+    /* PWL attempting to make this module synth vloce doesn't like different
+     * edges of clock in same block so i'm moving this check out of the block
+     * above and into this new one */
+    always begin
+	@ (negedge Clk) begin
+	    Sys_clk = 1'b0;
+	end
     end
 
     always @ (posedge Sys_clk) begin
@@ -538,10 +547,10 @@ module mt48lc2m32b2 (
 
             // Display debug message
             if (Dqm_reg0 !== 4'b1111) begin
-                Dq_reg = #tAC Dq_dqm;
+                Dq_reg <= #tAC Dq_dqm;//PWL changed to non-blocking
   
             end else begin
-                Dq_reg = #tHZ {data_bits{1'bz}};
+                Dq_reg <= #tHZ {data_bits{1'bz}};//PWL changed to non-blocking
    
             end
 
