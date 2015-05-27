@@ -62,7 +62,8 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
               .TRAS(TRAS_D),
               .TCAS(TCAS),
               .TRCD(TRCD_D),
-              .TRP(TRP_D)
+              .TRP(TRP_D),
+              .TWR(TWR)
     ) sdram_bus (.sdram_clk,
                  .sdram_clk_d,
                  .sdram_resetn(RESETN),

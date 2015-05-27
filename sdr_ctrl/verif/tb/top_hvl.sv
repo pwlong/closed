@@ -147,7 +147,11 @@ sdr_bus #(.SDR_DW(top_hdl.SDR_DW),
 );
 
 import sdr_pack::*;
-int assertFailsExpected = 0;
+int immediateAssertFailsExpected = 0;
+int trasAssertFailsExpected [0:3] = '{0,0,0,0};
+int trcdAssertFailsExpected [0:3] = '{0,0,0,0};
+int twrAssertFailsExpected  [0:3] = '{0,0,0,0};
+int trpAssertFailsExpected  [0:3] = '{0,0,0,0};
 
 // variable to drive the dummy sdrif
 cmd_t sdrif_cmd = cmd_t'(0);
@@ -465,19 +469,44 @@ initial begin
     // Begin Assertion Testing on dummy SDRAM interface
     // ---------------------------------------------
     
-    $display("\n\n###############################");
+    $display("\n\n\n\n###############################");
     $display("Testing dummy interface to break assertions");
     $display("###############################");
-    sdrif_test.VERBOSE = 0; // turn off prints from the bus used in top_hdl
-    sdrif_test.sdr_fsm_en = 0;
-    sdrif_break();
+    sdrif_test.VERBOSE = 0;
+    sdrif_test.sdr_fsm_en = 0; // shut off the FSM, not needed for immediate assertion testing
+    sdrif_immediateAssertionTest();
+    $display("###############################");
+    if (sdrif_test.assertFailCount == immediateAssertFailsExpected)
+        $display("IMMEDIATE ASSERTIONS: %d FAILED of an expected %d, success!", sdrif_test.assertFailCount, immediateAssertFailsExpected);
+    else
+        $display("IMMEDIATE ASSERTIONS: %d FAILED of an expected %d, failure!", sdrif_test.assertFailCount, immediateAssertFailsExpected);
+    $display("###############################");
+    
+    
+    
+    $display("\n\n\n\n###############################");
+    $display("TESTING CONCURRENT ASSERTIONS");
+    // reset the interface
+    sdrif_test.sdr_fsm_en = 1;
+    hvl_RESETN = 0;
+    repeat (5) @(posedge hvl_sdram_clk);
+    hvl_RESETN = 1;
+    repeat (5) @(posedge hvl_sdram_clk);
+    sdrif_test.sdr_fsm_en = 0; // shut off the FSM, not needed for concurrent assertion testing
+    sdrif_concurrentAssertionTest();
     
     $display("###############################");
-    if (sdrif_test.assertFailCount == assertFailsExpected)
-        $display("ASSERTIONS: %d FAILED of an expected %d, success!", sdrif_test.assertFailCount, assertFailsExpected);
-    else
-        $display("ASSERTIONS: %d FAILED of an expected %d, failure!", sdrif_test.assertFailCount, assertFailsExpected);
+    for (int b = 0; b < 4; b++) begin
+        $display("Bank %1d CONCURRENT ASSERTIONS:", b);
+        $display("       # failed, # expected");
+        $display("TRAS - %d, %d - %s", sdrif_test.trasViolationCount[b], trasAssertFailsExpected[b], (sdrif_test.trasViolationCount[b] === trasAssertFailsExpected[b]) ? "success!" : "failure!");
+        $display("TRCD - %d, %d - %s", sdrif_test.trcdViolationCount[b], trcdAssertFailsExpected[b], (sdrif_test.trcdViolationCount[b] === trcdAssertFailsExpected[b]) ? "success!" : "failure!");
+        $display("TRP  - %d, %d - %s", sdrif_test.trpViolationCount[b],   trpAssertFailsExpected[b], (sdrif_test.trpViolationCount[b]  ===  trpAssertFailsExpected[b]) ? "success!" : "failure!");
+        $display("TWR  - %d, %d - %s", sdrif_test.twrViolationCount[b],   twrAssertFailsExpected[b], (sdrif_test.twrViolationCount[b]  ===  twrAssertFailsExpected[b]) ? "success!" : "failure!");
+    end
     $display("###############################");
+    
+    
     
     $finish;
 end
@@ -578,7 +607,7 @@ task sdrif_on;
 endtask
 
 // loop through the possible states and break the assertions associated with that state 
-task sdrif_break;
+task sdrif_immediateAssertionTest;
     automatic cmd_t command = cmd_t'(0);
     automatic bankState_t state [3:0];
     
@@ -618,12 +647,169 @@ task sdrif_setcmd(cmd_t cmd, bankState_t bs, int bank);
         end
     end
     if (~valid) begin
-        assertFailsExpected++;
+        immediateAssertFailsExpected++;
     end
 endtask
 
 
 
+
+
+
+task sdrif_concurrentAssertionTest;
+    automatic bankState_t state [3:0];
+    
+    for (int b = 0; b < 4; b++) begin
+        sdrif_test.sdr_ba = b;      // assert bank enable for that bank
+        sdrif_cmd = CMD_NOP; // ensure cmd doing nothing
+        
+        // tras, trcd, and twr tests don't need any particular state, can set to idle
+        sdrif_test.bankState[b] = IDLE;
+        if (top_hdl.TRAS_D > 1)
+            sdrif_tras(b);
+        else
+            $display("TRAS too small to test, can't violate");
+            
+        if (top_hdl.TRCD_D > 1)
+            sdrif_trcd(b);
+        else
+            $display("TRAS too small to test, can't violate");
+            
+        if (top_hdl.TWR > 1)
+            sdrif_twr(b);
+        else
+            $display("TWR too small to test, can't violate");
+            
+        if (top_hdl.TRP_D > 1)
+            sdrif_trp(b);
+        else
+            $display("TRP too small to test, can't violate");
+        
+    end
+
+endtask
+
+task sdrif_tras(integer bank);
+    // to break assertion, send active, then less than TRAS clocks later, send precharge
+    static integer minClocks = top_hdl.TRAS_D;
+    $display("TRAS test - TRAS = %2d", minClocks);
+    
+    for (int clks = 1; clks <= minClocks+1; clks++) begin
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_ACTIVE;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks > 1) begin
+            sdrif_cmd = CMD_NOP;
+            repeat (clks-1) @(posedge hvl_sdram_clk);
+        end
+        
+        sdrif_cmd = CMD_PRECHARGE;
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_NOP;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks < minClocks)
+            trasAssertFailsExpected[bank]++;
+    end
+endtask
+
+task sdrif_trcd(integer bank);
+    // to break assertion, send active, then less than TRCD clocks later, send read or write
+    static integer minClocks = top_hdl.TRCD_D;
+    $display("TRCD test - TRCD = %2d", minClocks);
+    
+    for (int clks = 1; clks <= minClocks; clks++) begin
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_ACTIVE;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks > 1) begin
+            sdrif_cmd = CMD_NOP;
+            repeat (clks-1) @(posedge hvl_sdram_clk);
+        end
+        
+        sdrif_cmd = CMD_WRITE;
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_NOP;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks < minClocks)
+            trcdAssertFailsExpected[bank]++;
+    end
+    
+    for (int clks = 1; clks <= minClocks; clks++) begin
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_ACTIVE;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks > 1) begin
+            sdrif_cmd = CMD_NOP;
+            repeat (clks-1) @(posedge hvl_sdram_clk);
+        end
+        
+        sdrif_cmd = CMD_READ;
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_NOP;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks < minClocks)
+            trcdAssertFailsExpected[bank]++;
+    end
+endtask
+
+task sdrif_twr(integer bank);
+    // to break assertion, send write, then less than TWR clocks later, send precharge
+    static integer minClocks = top_hdl.TWR;
+    $display("TWR test - TWR = %2d", minClocks);
+    
+    for (int clks = 1; clks <= minClocks; clks++) begin
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_WRITE;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks > 1) begin
+            sdrif_cmd = CMD_NOP;
+            repeat (clks-1) @(posedge hvl_sdram_clk);
+        end
+        
+        sdrif_cmd = CMD_PRECHARGE;
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_NOP;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks < minClocks)
+            twrAssertFailsExpected[bank]++;
+    end
+endtask
+
+task sdrif_trp(integer bank);
+    // to break assertion, send precharge when not in IDLE, then less than TRP clocks later, send any command other than a NOP
+    static integer minClocks = top_hdl.TRP_D;
+    $display("TRP test - TRP = %2d", minClocks);
+    
+    // first, force bank to something other than IDLE
+    sdrif_test.bankState[bank] = WR;
+    for (int clks = 1; clks <= minClocks; clks++) begin
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_PRECHARGE;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks > 1) begin
+            sdrif_cmd = CMD_NOP;
+            repeat (clks-1) @(posedge hvl_sdram_clk);
+        end
+        
+        sdrif_cmd = CMD_WRITE;
+        @(posedge hvl_sdram_clk);
+        sdrif_cmd = CMD_NOP;
+        @(posedge hvl_sdram_clk);
+        
+        if (clks < minClocks)
+            trpAssertFailsExpected[bank]++;
+    end
+    sdrif_test.bankState[bank] = IDLE; // reset bank state to IDLE for next test
+endtask
 
 endmodule
 
