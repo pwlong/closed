@@ -246,7 +246,7 @@ interface sdr_bus #(
             IDLE         :  begin
                                 if((cmd === CMD_ACTIVE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVATING;
-                                else if (cmd === CMD_AUTO_REFRESH | (sdr_ba === i | aux_cmd))
+                                else if (cmd === CMD_AUTO_REFRESH & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = REFRESHING;
                                 else
                                     bankNextState[i] = IDLE;
