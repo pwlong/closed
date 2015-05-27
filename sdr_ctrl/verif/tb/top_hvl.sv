@@ -579,6 +579,7 @@ task readAllQueue;
     while (tcfifo.size > 0) begin
         #100;
         burst_read();
+        #100;
     end
 endtask
 
