@@ -88,7 +88,11 @@ interface sdr_bus #(
   logic aux_cmd;
   assign aux_cmd  = sdr_addr[10];
   
-  int assertFailCount = 0;
+  integer assertFailCount = 0;
+  integer trasViolationCount [0:3] = '{0,0,0,0};
+  integer trcdViolationCount [0:3] = '{0,0,0,0};
+  integer  trpViolationCount [0:3] = '{0,0,0,0};
+  integer  twrViolationCount [0:3] = '{0,0,0,0};
   
   //Acceptable Commands
   bit cmd_nop;
@@ -136,15 +140,71 @@ interface sdr_bus #(
   integer readingCounter[0:3]    = '{0,0,0,0};
   integer writingCounter[0:3]    = '{0,0,0,0};
   integer prechargeCounter[0:3]  = '{0,0,0,0};
+  
+  // track the number of times each state was entered
+  integer        idleCount[0:3] = '{0,0,0,0};
+  integer        initCount[0:3] = '{0,0,0,0};
+  integer  activatingCount[0:3] = '{0,0,0,0};
+  integer      activeCount[0:3] = '{0,0,0,0};
+  integer  refreshingCount[0:3] = '{0,0,0,0};
+  integer          wrCount[0:3] = '{0,0,0,0};
+  integer          rdCount[0:3] = '{0,0,0,0};
+  integer       wrwpcCount[0:3] = '{0,0,0,0};
+  integer       rdwpcCount[0:3] = '{0,0,0,0};
+  integer prechargingCount[0:3] = '{0,0,0,0};
+
 
   // Bank FSM Sequential Logic
-  always_ff @(posedge sdram_clk) begin
+  /*always_ff @(posedge sdram_clk) begin
     if (sdr_fsm_en) begin
     for (int i = 0; i < 4; i++) begin
         if (~sdram_resetn)
             bankState[i] <= INITIALIZING;
         else
             bankState[i] <= bankNextState[i];
+    end
+    end
+  end*/
+  always_ff @(posedge sdram_clk) begin
+    if (sdr_fsm_en) begin
+    for (int i = 0; i < 4; i++) begin
+        if (~sdram_resetn) begin
+            bankState[i] <= INITIALIZING;
+            unique case (bankNextState[i])
+              IDLE:        idleCount[i]        <= '0;
+              REFRESHING:  refreshingCount[i]  <= '0;
+              ACTIVE:      activeCount[i]      <= '0;
+              ACTIVATING:  activatingCount[i]  <= '0;
+              WR:          wrCount[i]          <= '0;
+              RD:          rdCount[i]          <= '0;
+              WR_W_PC:     wrwpcCount[i]       <= '0;
+              RD_W_PC:     rdwpcCount[i]       <= '0;
+              PRECHARGING: prechargingCount[i] <= '0;
+              INITIALIZING:initCount[i]        <= '0;
+            endcase
+            
+            trasViolationCount[i] <= '0;
+            trcdViolationCount[i] <= '0;
+            trpViolationCount[i]  <= '0;
+            twrViolationCount[i]  <= '0;
+        end
+        else begin
+            if (bankNextState[i] !== bankState[i]) begin
+                unique case (bankNextState[i])
+                  IDLE:        idleCount[i]        <= idleCount[i] + 1;
+                  REFRESHING:  refreshingCount[i]  <= refreshingCount[i] + 1;
+                  ACTIVE:      activeCount[i]      <= activeCount[i] + 1;
+                  ACTIVATING:  activatingCount[i]  <= activatingCount[i] + 1;
+                  WR:          wrCount[i]          <= wrCount[i] + 1;
+                  RD:          rdCount[i]          <= rdCount[i] + 1;
+                  WR_W_PC:     wrwpcCount[i]       <= wrwpcCount[i] + 1;
+                  RD_W_PC:     rdwpcCount[i]       <= rdwpcCount[i] + 1;
+                  PRECHARGING: prechargingCount[i] <= prechargingCount[i] + 1;
+                  INITIALIZING:initCount[i]        <= initCount[i] + 1;
+                endcase
+            end
+            bankState[i] <= bankNextState[i];
+        end
     end
     end
   end
@@ -322,28 +382,40 @@ interface sdr_bus #(
             @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]
                                  (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
           endsequence
-          assert property (not trasViolation) else $display("sdrc_if: Bank %p Tras violation", k);
+          assert property (not trasViolation) else begin
+            trasViolationCount[k] <= trasViolationCount[k] + 1;
+            $display("sdrc_if: Bank %p Tras violation", k);
+          end
       end
       if (TRCD > 1) begin
           sequence trcdViolation;
             @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRCD-1]
                                  ((sdr_ba === k) & (cmd === CMD_WRITE) | (cmd === CMD_READ));
           endsequence
-          assert property (not trcdViolation) else $display("sdrc_if: Bank %p Trcd violation", k);
+          assert property (not trcdViolation) else begin
+            trcdViolationCount[k] <= trcdViolationCount[k] + 1;
+            $display("sdrc_if: Bank %p Trcd violation", k);
+          end
       end
       if (TRP > 1) begin
           sequence trpViolation;
             @(posedge sdram_clk) ((cmd === CMD_PRECHARGE)  & ((sdr_ba === k) | aux_cmd) & (bankState[k] !== IDLE)) ##[1:TRP-1]
                                  ((sdr_ba === k) & (~cmd_nop));
           endsequence
-          assert property (not trpViolation)  else $display("sdrc_if: Bank %p Trp  violation", k);
+          assert property (not trpViolation)  else begin
+            trpViolationCount[k] <= trpViolationCount[k] + 1;
+            $display("sdrc_if: Bank %p Trp  violation", k);
+          end
       end
       if (TWR > 1) begin
           sequence twrViolation;
             @(posedge sdram_clk) ((cmd === CMD_WRITE) & (sdr_ba === k)) ##[1:TWR-1]
                                  (((sdr_ba === k) | aux_cmd) & (cmd === CMD_PRECHARGE));
           endsequence
-          assert property (not twrViolation)  else $display("sdrc_if: Bank %p Twr  violation", k);
+          assert property (not twrViolation)  else begin
+            twrViolationCount[k] <= twrViolationCount[k] + 1;
+            $display("sdrc_if: Bank %p Twr  violation", k);
+          end
       end
     end
   endgenerate
