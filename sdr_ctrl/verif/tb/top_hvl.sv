@@ -422,11 +422,13 @@ initial begin
             t = new(0,0,0,($random & 8'h0f)+1);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
+            
         end
         $display(" case 7 - writes: %2d finished", writes);
         writes = $urandom_range(0, writes); // read a random number of the previous writes
         for (i = 0; i < writes; i++) begin
             burst_read();
+            #100;
         end
         $display(" case 7 - reads: %2d finished, %3d test cases left in queue", writes, tcfifo.size());
     end
@@ -576,7 +578,7 @@ endtask
 task readAllQueue;
     #100;
     while (tcfifo.size > 0) begin
-        #100;
+        //#100;
         burst_read();
         #100;
     end
