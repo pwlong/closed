@@ -1,8 +1,7 @@
 `include "sdr_pack.sv"
 interface sdr_bus #(
-  parameter  SDR_DW   = 16,         // SDRAM Data Width 
-  parameter  SDR_BW   = 2,          // SDRAM Byte Width
-  // Parameters to describe timing attributes of interface
+  parameter SDR_DW   = 16,         // SDRAM Data Width 
+  parameter SDR_BW   = 2,          // SDRAM Byte Width
   parameter BURST_LENGTH = 1, // Read/Write Burst Length
   parameter TRAS         = 1, // Activate to Precharge Delay
   parameter TCAS         = 1, // CAS Delay
@@ -10,7 +9,6 @@ interface sdr_bus #(
   parameter TRP          = 1, // Precharge Command Period
   parameter TWR          = 1, // Write Recover Time
   parameter NUM_BANKS    = 4  // Number of banks to keep track of state of
-  //parameter VERBOSE      = 1
 )(
   input logic sdram_clk,          // SDRAM Clock
   input logic sdram_clk_d,        // Delayed clock
@@ -22,7 +20,7 @@ interface sdr_bus #(
   logic 	          sdr_ras_n;   // SDRAM ras
   logic 	          sdr_cas_n;   // SDRAM cas
   logic 	          sdr_we_n;    // SDRAM write enable
-  wire [SDR_DW-1:0]  sdr_dq;       // SDRAM DATA                               
+  wire  [SDR_DW-1:0]  sdr_dq;      // SDRAM DATA                               
   logic [SDR_BW-1:0]  sdr_dqm;     // SDRAM Data Mask
   logic [1:0]         sdr_ba;      // SDRAM Bank Enable
   logic [12:0] 		  sdr_addr;    // SDRAM Address
@@ -142,7 +140,7 @@ interface sdr_bus #(
   integer writingCounter[0:NUM_BANKS-1]    = '{NUM_BANKS{0}};
   integer prechargeCounter[0:NUM_BANKS-1]  = '{NUM_BANKS{0}};
   
-  // track the number of times each state was entered
+  // Track the number of times each state was entered
   integer        idleCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
   integer        initCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
   integer  activatingCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
@@ -198,8 +196,7 @@ interface sdr_bus #(
     end
   end
 
-  // Keep track of length of time
-  // in certain states
+  // Keep track of length of time in certain states
   always_ff @(posedge sdram_clk) begin
     for (int i = 0; i < NUM_BANKS; i++) begin
         case(bankState[i])
@@ -318,7 +315,7 @@ interface sdr_bus #(
     end
   end
 
-  // Validates commands are legal for each bank in each state
+  // Validates commands are legal for each bank in each state.
   // These are for Bank N -> Bank N checks
   always@ (posedge sdram_clk) begin
     for(int i = 0; i < NUM_BANKS; i++) begin
@@ -339,7 +336,7 @@ interface sdr_bus #(
     end
   end
 
-  // Validates commands are legal for banks in each state
+  // Validates commands are legal for banks in each state.
   // These are for Bank N -> Bank M checks
   always@ (posedge sdram_clk) begin
     for(int i = 0; i < NUM_BANKS; i++) begin
