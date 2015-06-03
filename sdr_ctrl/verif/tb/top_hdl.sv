@@ -80,7 +80,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
         // wishbone interface
         wbi.master,
         // sdram interface
-        sdram_bus,
+        sdram_bus.ctrlcore,
         // configuration bus
         cfg.slave
     );

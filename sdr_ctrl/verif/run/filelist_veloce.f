@@ -3,7 +3,6 @@
 +define+VERBOSE \
 +incdir+../../rtl/core \
 +incdir+../../rtl/interfaces \
-../../rtl/interfaces/sdr_if.sv \
 ../../rtl/interfaces/wbinterface.sv \
 ../../rtl/interfaces/cfg_if.sv \
 ../model/mt48lc2m32b2_SYNTH.v \
