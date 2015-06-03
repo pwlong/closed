@@ -1,12 +1,13 @@
 
 
 `include "../../rtl/core/sdrc_define.v"
+`include "top_defines.sv"
 `timescale 1ns/1ps
 // this is the emulation side of Veloce 
 // it instantiates all modules, connects them up, and generates the system wide clock
 module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
 
-
+/*
     // DEFINE TEST PARAMETERS
     localparam dw = 32; // application data width
     localparam tw = 8;  // tag id width
@@ -33,7 +34,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
     localparam BURST_LEN = dw/SDR_DW; // READ/WRITE Burst Length
     localparam P_SYS     = 10;     //    200MHz
     localparam P_SDR     = 20;     //    100MHz
-
+*/
     // WIRE DECLARATIONS
     logic sys_clk,sdram_clk,sdram_clk_d,RESETN;
     logic sdr_init_done;

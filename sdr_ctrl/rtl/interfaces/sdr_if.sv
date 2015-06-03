@@ -1,15 +1,14 @@
 `include "sdr_pack.sv"
 interface sdr_bus #(
-  parameter  SDR_DW   = 16,         // SDRAM Data Width 
-  parameter  SDR_BW   = 2,          // SDRAM Byte Width
-  // Parameters to describe timing attributes of interface
+  parameter SDR_DW   = 16,         // SDRAM Data Width 
+  parameter SDR_BW   = 2,          // SDRAM Byte Width
   parameter BURST_LENGTH = 1, // Read/Write Burst Length
   parameter TRAS         = 1, // Activate to Precharge Delay
   parameter TCAS         = 1, // CAS Delay
   parameter TRCD         = 1, // Ras to Cas Delay
   parameter TRP          = 1, // Precharge Command Period
-  parameter TWR          = 1//, // Write Recover Time
-  //parameter VERBOSE      = 1
+  parameter TWR          = 1, // Write Recover Time
+  parameter NUM_BANKS    = 4  // Number of banks to keep track of state of
 )(
   input logic sdram_clk,          // SDRAM Clock
   input logic sdram_clk_d,        // Delayed clock
@@ -21,7 +20,7 @@ interface sdr_bus #(
   logic 	          sdr_ras_n;   // SDRAM ras
   logic 	          sdr_cas_n;   // SDRAM cas
   logic 	          sdr_we_n;    // SDRAM write enable
-  wire [SDR_DW-1:0]  sdr_dq;       // SDRAM DATA                               
+  wire  [SDR_DW-1:0]  sdr_dq;      // SDRAM DATA                               
   logic [SDR_BW-1:0]  sdr_dqm;     // SDRAM Data Mask
   logic [1:0]         sdr_ba;      // SDRAM Bank Enable
   logic [12:0] 		  sdr_addr;    // SDRAM Address
@@ -89,10 +88,10 @@ interface sdr_bus #(
   assign aux_cmd  = sdr_addr[10];
   
   integer assertFailCount = 0;
-  integer trasViolationCount [0:3] = '{0,0,0,0};
-  integer trcdViolationCount [0:3] = '{0,0,0,0};
-  integer  trpViolationCount [0:3] = '{0,0,0,0};
-  integer  twrViolationCount [0:3] = '{0,0,0,0};
+  integer trasViolationCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer trcdViolationCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer trpViolationCount[0:NUM_BANKS-1]  = '{NUM_BANKS{0}};
+  integer twrViolationCount[0:NUM_BANKS-1]  = '{NUM_BANKS{0}};
   
   //Acceptable Commands
   bit cmd_nop;
@@ -130,44 +129,32 @@ interface sdr_bus #(
     end
   endtask
   
-  // Array of 4 values, one for each bank
-  bankState_t bankState[0:3];
-  bankState_t bankNextState[0:3];
+  // Array of NUM_BANKS values, one for each bank
+  bankState_t bankState[0:NUM_BANKS-1];
+  bankState_t bankNextState[0:NUM_BANKS-1];
 
   // Used to keep track of counts while in specific states
-  integer activatingCounter[0:3] = '{0,0,0,0};
-  integer refreshingCounter[0:3] = '{0,0,0,0};
-  integer readingCounter[0:3]    = '{0,0,0,0};
-  integer writingCounter[0:3]    = '{0,0,0,0};
-  integer prechargeCounter[0:3]  = '{0,0,0,0};
+  integer activatingCounter[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer refreshingCounter[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer readingCounter[0:NUM_BANKS-1]    = '{NUM_BANKS{0}};
+  integer writingCounter[0:NUM_BANKS-1]    = '{NUM_BANKS{0}};
+  integer prechargeCounter[0:NUM_BANKS-1]  = '{NUM_BANKS{0}};
   
-  // track the number of times each state was entered
-  integer        idleCount[0:3] = '{0,0,0,0};
-  integer        initCount[0:3] = '{0,0,0,0};
-  integer  activatingCount[0:3] = '{0,0,0,0};
-  integer      activeCount[0:3] = '{0,0,0,0};
-  integer  refreshingCount[0:3] = '{0,0,0,0};
-  integer          wrCount[0:3] = '{0,0,0,0};
-  integer          rdCount[0:3] = '{0,0,0,0};
-  integer       wrwpcCount[0:3] = '{0,0,0,0};
-  integer       rdwpcCount[0:3] = '{0,0,0,0};
-  integer prechargingCount[0:3] = '{0,0,0,0};
+  // Track the number of times each state was entered
+  integer        idleCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer        initCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer  activatingCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer      activeCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer  refreshingCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer          wrCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer          rdCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer       wrwpcCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer       rdwpcCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
+  integer prechargingCount[0:NUM_BANKS-1] = '{NUM_BANKS{0}};
 
-
-  // Bank FSM Sequential Logic
-  /*always_ff @(posedge sdram_clk) begin
-    if (sdr_fsm_en) begin
-    for (int i = 0; i < 4; i++) begin
-        if (~sdram_resetn)
-            bankState[i] <= INITIALIZING;
-        else
-            bankState[i] <= bankNextState[i];
-    end
-    end
-  end*/
   always_ff @(posedge sdram_clk) begin
     if (sdr_fsm_en) begin
-    for (int i = 0; i < 4; i++) begin
+    for (int i = 0; i < NUM_BANKS; i++) begin
         if (~sdram_resetn) begin
             bankState[i] <= INITIALIZING;
             unique case (bankNextState[i])
@@ -209,10 +196,9 @@ interface sdr_bus #(
     end
   end
 
-  // Keep track of length of time
-  // in certain states
+  // Keep track of length of time in certain states
   always_ff @(posedge sdram_clk) begin
-    for (int i = 0; i < 4; i++) begin
+    for (int i = 0; i < NUM_BANKS; i++) begin
         case(bankState[i])
             REFRESHING:  refreshingCounter[i] <= refreshingCounter[i] + 1;
             ACTIVATING:  activatingCounter[i] <= activatingCounter[i] + 1;
@@ -235,7 +221,7 @@ interface sdr_bus #(
   // Next State Combinational Logic
   always_comb begin
     if (sdr_fsm_en) begin
-    for (int i = 0; i < 4; i++) begin
+    for (int i = 0; i < NUM_BANKS; i++) begin
         case(bankState[i])
             INITIALIZING :  begin
                                 if(sdr_init_done)
@@ -246,7 +232,7 @@ interface sdr_bus #(
             IDLE         :  begin
                                 if((cmd === CMD_ACTIVE) & (sdr_ba === i))
                                     bankNextState[i] = ACTIVATING;
-                                else if (cmd === CMD_AUTO_REFRESH)
+                                else if (cmd === CMD_AUTO_REFRESH & (sdr_ba === i | aux_cmd))
                                     bankNextState[i] = REFRESHING;
                                 else
                                     bankNextState[i] = IDLE;
@@ -329,11 +315,11 @@ interface sdr_bus #(
     end
   end
 
-  // Validates commands are legal for each bank in each state
+  // Validates commands are legal for each bank in each state.
   // These are for Bank N -> Bank N checks
   always@ (posedge sdram_clk) begin
-    for(int i = 0; i < 4; i++) begin
-        if ((sdr_ba === i) | (aux_cmd & cmd === CMD_PRECHARGE) | (cmd === CMD_AUTO_REFRESH)) begin
+    for(int i = 0; i < NUM_BANKS; i++) begin
+        if ((sdr_ba === i) | (aux_cmd & (cmd === CMD_PRECHARGE | cmd === CMD_AUTO_REFRESH))) begin
             case (bankState[i])
                 INITIALIZING:$display("sdrc_if: Init State");
                 IDLE:        doCommandAssert(i, bankState[i], cmd_idle);
@@ -350,11 +336,11 @@ interface sdr_bus #(
     end
   end
 
-  // Validates commands are legal for banks in each state
+  // Validates commands are legal for banks in each state.
   // These are for Bank N -> Bank M checks
   always@ (posedge sdram_clk) begin
-    for(int i = 0; i < 4; i++) begin
-      for (int j = 0; j < 4; j++) begin
+    for(int i = 0; i < NUM_BANKS; i++) begin
+      for (int j = 0; j < NUM_BANKS; j++) begin
         if (i !== j) begin
             if (((sdr_ba === j) | (aux_cmd & cmd === CMD_PRECHARGE)) & (cmd !== CMD_BURST_TERMINATE)) begin
                 case (bankState[i])
@@ -376,7 +362,7 @@ interface sdr_bus #(
   // and assert that they are never observed
   genvar k;
   generate
-    for (k = 0; k < 4; k++) begin
+    for (k = 0; k < NUM_BANKS; k++) begin
       if (TRAS > 1) begin
         sequence trasViolation;
             @(posedge sdram_clk) ((cmd === CMD_ACTIVE) & (sdr_ba === k)) ##[1:TRAS-1]

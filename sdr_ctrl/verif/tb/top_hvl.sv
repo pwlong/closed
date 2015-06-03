@@ -46,6 +46,7 @@
 //////////////////////////////////////////////////////////////////////
 
 
+`include "top_defines.sv"
 `timescale 1ns/1ps
 
 module top_hvl #()();
@@ -133,13 +134,13 @@ logic hvl_sdram_clk     = 0,
       hvl_RESETN        = 1, // reset is active low
       hvl_sdr_init_done = 0; // when sdr_init_done is asserted, the FSM can move
 
-sdr_bus #(.SDR_DW(32/*top_hdl.SDR_DW*/),
-          .SDR_BW(16/*top_hdl.SDR_BW*/),
-          .BURST_LENGTH(1/*top_hdl.BURST_LEN*/),
-          .TRAS(4/*top_hdl.TRAS_D*/),
-          .TCAS(3/*top_hdl.TCAS*/),
-          .TRCD(2/*top_hdl.TRCD_D*/),
-          .TRP(2/*top_hdl.TRP_D*/)
+sdr_bus #(.SDR_DW(SDR_DW),
+          .SDR_BW(SDR_BW),
+          .BURST_LENGTH(BURST_LEN),
+          .TRAS(TRAS_D),
+          .TCAS(TCAS),
+          .TRCD(TRCD_D),
+          .TRP(TRP_D)
 ) sdrif_test (.sdram_clk(hvl_sdram_clk),
              .sdram_clk_d(hvl_sdram_clk_d),
              .sdram_resetn(hvl_RESETN),
@@ -158,7 +159,7 @@ cmd_t sdrif_cmd = cmd_t'(0);
 assign {sdrif_test.sdr_cs_n, sdrif_test.sdr_ras_n, sdrif_test.sdr_cas_n, sdrif_test.sdr_we_n} = sdrif_cmd;
 
 // generate dummy interface clocks
-always #(top_hdl.P_SDR/2) hvl_sdram_clk = ~hvl_sdram_clk;
+always #(P_SDR/2) hvl_sdram_clk = ~hvl_sdram_clk;
 
 // list of valid commands for each state
 cmd_t validCommands[bankState_t][$];
@@ -197,7 +198,7 @@ initial begin
     // (5+1+1+1+1+1+4+5+5+0)*4 =  96   valid commands
     // total of 320 commands across all four banks
     
-    $display("validCommands = %p", validCommands);
+    //$display("validCommands = %p", validCommands);
 end
 
 
@@ -418,17 +419,16 @@ initial begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             j = ($random & 8'h0f)+1;
-            $display("J = %d", j);
+            //$display("J = %d", j);
             t = new(0,0,0,($random & 8'h0f)+1);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
-            
         end
         $display(" case 7 - writes: %2d finished", writes);
         writes = $urandom_range(0, writes); // read a random number of the previous writes
         for (i = 0; i < writes; i++) begin
             burst_read();
-            #100;
+            //#100;
         end
         $display(" case 7 - reads: %2d finished, %3d test cases left in queue", writes, tcfifo.size());
     end
@@ -682,22 +682,22 @@ task sdrif_concurrentAssertionTest;
         
         // tras, trcd, and twr tests don't need any particular state, can set to idle
         sdrif_test.bankState[b] = IDLE;
-        if (top_hdl.TRAS_D > 1)
+        if (TRAS_D > 1)
             sdrif_tras(b);
         else
             $display("TRAS too small to test, can't violate");
             
-        if (top_hdl.TRCD_D > 1)
+        if (TRCD_D > 1)
             sdrif_trcd(b);
         else
             $display("TRAS too small to test, can't violate");
             
-        if (top_hdl.TWR > 1)
+        if (TWR > 1)
             sdrif_twr(b);
         else
             $display("TWR too small to test, can't violate");
             
-        if (top_hdl.TRP_D > 1)
+        if (TRP_D > 1)
             sdrif_trp(b);
         else
             $display("TRP too small to test, can't violate");
@@ -708,7 +708,7 @@ endtask
 
 task sdrif_tras(integer bank);
     // to break assertion, send active, then less than TRAS clocks later, send precharge
-    static integer minClocks = top_hdl.TRAS_D;
+    static integer minClocks = TRAS_D;
     $display("TRAS test - TRAS = %2d", minClocks);
     
     for (int clks = 1; clks <= minClocks+1; clks++) begin
@@ -733,7 +733,7 @@ endtask
 
 task sdrif_trcd(integer bank);
     // to break assertion, send active, then less than TRCD clocks later, send read or write
-    static integer minClocks = top_hdl.TRCD_D;
+    static integer minClocks = TRCD_D;
     $display("TRCD test - TRCD = %2d", minClocks);
     
     for (int clks = 1; clks <= minClocks; clks++) begin
@@ -777,7 +777,7 @@ endtask
 
 task sdrif_twr(integer bank);
     // to break assertion, send write, then less than TWR clocks later, send precharge
-    static integer minClocks = top_hdl.TWR;
+    static integer minClocks = TWR;
     $display("TWR test - TWR = %2d", minClocks);
     
     for (int clks = 1; clks <= minClocks; clks++) begin
@@ -802,7 +802,7 @@ endtask
 
 task sdrif_trp(integer bank);
     // to break assertion, send precharge when not in IDLE, then less than TRP clocks later, send any command other than a NOP
-    static integer minClocks = top_hdl.TRP_D;
+    static integer minClocks = TRP_D;
     $display("TRP test - TRP = %2d", minClocks);
     
     // first, force bank to something other than IDLE
@@ -820,7 +820,7 @@ task sdrif_trp(integer bank);
         sdrif_cmd = CMD_WRITE;
         @(posedge hvl_sdram_clk);
         sdrif_cmd = CMD_NOP;
-        repeat (top_hdl.TWR) @(posedge hvl_sdram_clk); // need to repeat the NOP for TWR cycles to not accidentally fail TWR
+        repeat (TWR) @(posedge hvl_sdram_clk); // need to repeat the NOP for TWR cycles to not accidentally fail TWR
         
         if (clks < minClocks)
             trpAssertFailsExpected[bank]++;
