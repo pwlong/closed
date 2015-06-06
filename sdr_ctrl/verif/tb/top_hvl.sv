@@ -201,12 +201,6 @@ initial begin
     commands = {};
     
     validCommands[INITIALIZING] = commands; // 0 valid commands, 8 invalid
-    
-    // (3+7+7+7+7+7+4+3+3+8)*4 = 224 invalid commands
-    // (5+1+1+1+1+1+4+5+5+0)*4 =  96   valid commands
-    // total of 320 commands across all four banks
-    
-    //$display("validCommands = %p", validCommands);
 end
 
 
@@ -427,7 +421,6 @@ initial begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             j = ($random & 8'h0f)+1;
-            //$display("J = %d", j);
             t = new(0,0,0,($random & 8'h0f)+1);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
@@ -436,7 +429,6 @@ initial begin
         writes = $urandom_range(0, writes); // read a random number of the previous writes
         for (i = 0; i < writes; i++) begin
             burst_read();
-            //#100;
         end
         $display(" case 7 - reads: %2d finished, %3d test cases left in queue", writes, tcfifo.size());
     end
@@ -586,7 +578,6 @@ endtask
 task readAllQueue;
     #100;
     while (tcfifo.size > 0) begin
-        //#100;
         burst_read();
         #100;
     end
