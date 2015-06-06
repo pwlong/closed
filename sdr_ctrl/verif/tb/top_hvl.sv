@@ -112,13 +112,7 @@ class TestCase;
     endfunction
     
     function void print();
-        //string data, d;
-        //for (int i = 7; i >= 0; i--) begin          // pretty print prints as integers... this formats to hex for smaller prints
-        //    $sformat(d, "%8h", this.data[i]);
-        //    data = {data, ", ", d};
-        //end
         $display("Transaction - address=%h, row=%5h, bank=%1d, column=%2h, bl=%3h", this.address, this.row, this.bank, this.column, this.bl);
-        //$display("Transaction - data = %s", data);
     endfunction
 
 endclass
