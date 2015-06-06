@@ -1,26 +1,34 @@
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
+////    top_hvl.sv                                                ////
 ////                                                              ////
-////  This file is part of the SDRAM Controller project           ////
-////  http://www.opencores.org/cores/sdr_ctrl/                    ////
+//// Top HVL is the testbench for stimulating the DRAM controller ////
+//// This file houses the test cases and the methods for          ////
+//// interacting with the HDL (DUT). The HDL methods are accessed ////
+//// hierarchically. It also houses a class for creating test     ////
+//// cases for the SDRC.                                          ////
+//// On top of testing the SDRC, it also tests the SDRC interface ////
+//// by instantiating a dummy SDRC interface and manipulating the ////
+//// states and inputs. Both concurrent and immediate assertions  ////
+//// are tested.                                                  ////
 ////                                                              ////
-////  Description                                                 ////
-////  SDRAM CTRL definitions.                                     ////
-////                                                              ////
-////  To Do:                                                      ////
-////    nothing                                                   ////
-////                                                              ////
-//   Version  :0.1 - Test Bench automation is improvised with     ////
-//             seperate data,address,burst length fifo.           ////
-//             Now user can create different write and            ////
-//             read sequence                                      ////
-//                                                                ////
-////  Author(s):                                                  ////
-////      - Dinesh Annayya, dinesha@opencores.org                 ////
+//// SDRC/SDRAM test cases:                                       ////
+////   1. Single read and write                                   ////
+////   2. Same as first test case but twice in a row              ////
+////   3. Page cross-over - writes/reads that force opening of    ////
+////      a new row with each command                             ////
+////   4. 4 writes to different rows followed by 4 reads          ////
+////   5. 24 writes to different banks/rows followed by 24 reads  ////
+////   6. Random address/data/burst length writes, followed by    ////
+////      the same number of reads. Looped 50 times               ////
+////   7. Random address/data/burst length writes, followed by    ////
+////      random numbers of reads (less than the number of        ////
+////      writes). Finishes by reading off all test cases in the  ////
+////      queue.                                                  ////
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
-//// Copyright (C) 2000 Authors and OPENCORES.ORG                 ////
+//// Copyright (C) 2015 Authors and OPENCORES.ORG                 ////
 ////                                                              ////
 //// This source file may be used and distributed without         ////
 //// restriction provided that this copyright statement is not    ////
@@ -55,7 +63,7 @@ module top_hvl #()();
 // two ways to set the address
 //      directly set row/bank/column when calling 'new()'
 //      call 'new()' with 0s for row/bank/column then call 'setAddress(<32bit address>)'
-// data is randomized whenever 'new()' is called
+// data is randomized whenever 'new()' is called (can also directly call 'newData()')
 class TestCase;
     logic         [31:0] address;
     logic [255:0] [31:0] data;
@@ -399,7 +407,7 @@ initial begin
     readAllQueue(); // read out the previous writes
   
     $display("---------------------------------------------------");
-    $display(" Case-6: 20 loops of random numbers of random address/data write of random burst lengths and the same number of reads");
+    $display(" Case-6: loops of random numbers of random address/data write of random burst lengths and the same number of reads");
     $display("---------------------------------------------------");
     for(k = 0; k < 50; k++) begin
         writes = $urandom_range(0, 20);
