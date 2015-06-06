@@ -14,7 +14,7 @@ N.B. - make veloce doesn't work.
 README.md                                       (This is a markdown file used to annotate our GitHub repository)
                                                 (https://github.com/pwlong/closed)
 
-SDRAMControllerVerification_Presentation.pdf    (This is a pdf version of the Presentation Slides used in class)
+SDRAM Controller Verification .pdf              (This is a pdf version of the Presentation Slides used in class)
 
 sdr_ctrl\doc                                    (This contains the Micron SDRAM Datasheet)
     \mt48lc2m32b2_sdram.pdf
