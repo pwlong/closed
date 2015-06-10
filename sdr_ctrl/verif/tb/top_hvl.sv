@@ -1,26 +1,34 @@
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
+////    top_hvl.sv                                                ////
 ////                                                              ////
-////  This file is part of the SDRAM Controller project           ////
-////  http://www.opencores.org/cores/sdr_ctrl/                    ////
+//// Top HVL is the testbench for stimulating the DRAM controller ////
+//// This file houses the test cases and the methods for          ////
+//// interacting with the HDL (DUT). The HDL methods are accessed ////
+//// hierarchically. It also houses a class for creating test     ////
+//// cases for the SDRC.                                          ////
+//// On top of testing the SDRC, it also tests the SDRC interface ////
+//// by instantiating a dummy SDRC interface and manipulating the ////
+//// states and inputs. Both concurrent and immediate assertions  ////
+//// are tested.                                                  ////
 ////                                                              ////
-////  Description                                                 ////
-////  SDRAM CTRL definitions.                                     ////
-////                                                              ////
-////  To Do:                                                      ////
-////    nothing                                                   ////
-////                                                              ////
-//   Version  :0.1 - Test Bench automation is improvised with     ////
-//             seperate data,address,burst length fifo.           ////
-//             Now user can create different write and            ////
-//             read sequence                                      ////
-//                                                                ////
-////  Author(s):                                                  ////
-////      - Dinesh Annayya, dinesha@opencores.org                 ////
+//// SDRC/SDRAM test cases:                                       ////
+////   1. Single read and write                                   ////
+////   2. Same as first test case but twice in a row              ////
+////   3. Page cross-over - writes/reads that force opening of    ////
+////      a new row with each command                             ////
+////   4. 4 writes to different rows followed by 4 reads          ////
+////   5. 24 writes to different banks/rows followed by 24 reads  ////
+////   6. Random address/data/burst length writes, followed by    ////
+////      the same number of reads. Looped 50 times               ////
+////   7. Random address/data/burst length writes, followed by    ////
+////      random numbers of reads (less than the number of        ////
+////      writes). Finishes by reading off all test cases in the  ////
+////      queue.                                                  ////
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
-//// Copyright (C) 2000 Authors and OPENCORES.ORG                 ////
+//// Copyright (C) 2015 Authors and OPENCORES.ORG                 ////
 ////                                                              ////
 //// This source file may be used and distributed without         ////
 //// restriction provided that this copyright statement is not    ////
@@ -55,7 +63,7 @@ module top_hvl #()();
 // two ways to set the address
 //      directly set row/bank/column when calling 'new()'
 //      call 'new()' with 0s for row/bank/column then call 'setAddress(<32bit address>)'
-// data is randomized whenever 'new()' is called
+// data is randomized whenever 'new()' is called (can also directly call 'newData()')
 class TestCase;
     logic         [31:0] address;
     logic [255:0] [31:0] data;
@@ -104,13 +112,7 @@ class TestCase;
     endfunction
     
     function void print();
-        //string data, d;
-        //for (int i = 7; i >= 0; i--) begin          // pretty print prints as integers... this formats to hex for smaller prints
-        //    $sformat(d, "%8h", this.data[i]);
-        //    data = {data, ", ", d};
-        //end
         $display("Transaction - address=%h, row=%5h, bank=%1d, column=%2h, bl=%3h", this.address, this.row, this.bank, this.column, this.bl);
-        //$display("Transaction - data = %s", data);
     endfunction
 
 endclass
@@ -193,12 +195,6 @@ initial begin
     commands = {};
     
     validCommands[INITIALIZING] = commands; // 0 valid commands, 8 invalid
-    
-    // (3+7+7+7+7+7+4+3+3+8)*4 = 224 invalid commands
-    // (5+1+1+1+1+1+4+5+5+0)*4 =  96   valid commands
-    // total of 320 commands across all four banks
-    
-    //$display("validCommands = %p", validCommands);
 end
 
 
@@ -399,7 +395,7 @@ initial begin
     readAllQueue(); // read out the previous writes
   
     $display("---------------------------------------------------");
-    $display(" Case-6: 20 loops of random numbers of random address/data write of random burst lengths and the same number of reads");
+    $display(" Case-6: loops of random numbers of random address/data write of random burst lengths and the same number of reads");
     $display("---------------------------------------------------");
     for(k = 0; k < 50; k++) begin
         writes = $urandom_range(0, 20);
@@ -419,7 +415,6 @@ initial begin
         writes = $urandom_range(0, 20);
         for (i = 0; i < writes; i++) begin
             j = ($random & 8'h0f)+1;
-            //$display("J = %d", j);
             t = new(0,0,0,($random & 8'h0f)+1);
             t.setAddress($random & 32'h003FFFFF);
             burst_write(t);
@@ -428,7 +423,6 @@ initial begin
         writes = $urandom_range(0, writes); // read a random number of the previous writes
         for (i = 0; i < writes; i++) begin
             burst_read();
-            //#100;
         end
         $display(" case 7 - reads: %2d finished, %3d test cases left in queue", writes, tcfifo.size());
     end
@@ -578,7 +572,6 @@ endtask
 task readAllQueue;
     #100;
     while (tcfifo.size > 0) begin
-        //#100;
         burst_read();
         #100;
     end

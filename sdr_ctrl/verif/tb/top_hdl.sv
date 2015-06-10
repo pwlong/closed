@@ -1,4 +1,46 @@
-
+//////////////////////////////////////////////////////////////////////
+////                                                              ////
+////    top_hdl.sv                                                ////
+////                                                              ////
+//// HDL instantiates all modules and interfaces for testing the  ////
+//// DUT                                                          ////
+////    modules                                                   ////
+////        - sdrc_top - this is the top level SDRAM controller   ////
+////        - DIMM - a memory stub for the SDRC to interact with  ////
+////    interfaces                                                ////
+////        - wishbone_interface - allows testbench/HVL to        ////
+////          communicate with the SDRC                           ////
+////        - cfg_if - allows testbench to set up the SDRC        ////
+////        - sdr_bus - interface between SDRC and SDRAM          ////
+//// The HDL also houses the clocks for the DUT - this is         ////
+//// required by Veloce                                           ////
+////                                                              ////
+//////////////////////////////////////////////////////////////////////
+////                                                              ////
+//// Copyright (C) 2015 Authors and OPENCORES.ORG                 ////
+////                                                              ////
+//// This source file may be used and distributed without         ////
+//// restriction provided that this copyright statement is not    ////
+//// removed from the file and that any derivative work contains  ////
+//// the original copyright notice and the associated disclaimer. ////
+////                                                              ////
+//// This source file is free software; you can redistribute it   ////
+//// and/or modify it under the terms of the GNU Lesser General   ////
+//// Public License as published by the Free Software Foundation; ////
+//// either version 2.1 of the License, or (at your option) any   ////
+//// later version.                                               ////
+////                                                              ////
+//// This source is distributed in the hope that it will be       ////
+//// useful, but WITHOUT ANY WARRANTY; without even the implied   ////
+//// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR      ////
+//// PURPOSE.  See the GNU Lesser General Public License for more ////
+//// details.                                                     ////
+////                                                              ////
+//// You should have received a copy of the GNU Lesser General    ////
+//// Public License along with this source; if not, download it   ////
+//// from http://www.opencores.org/lgpl.shtml                     ////
+////                                                              ////
+//////////////////////////////////////////////////////////////////////
 
 `include "../../rtl/core/sdrc_define.v"
 `include "top_defines.sv"
@@ -7,34 +49,6 @@
 // it instantiates all modules, connects them up, and generates the system wide clock
 module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
 
-/*
-    // DEFINE TEST PARAMETERS
-    localparam dw = 32; // application data width
-    localparam tw = 8;  // tag id width
-`ifdef SDR_32BIT
-    localparam    SDR_DW          = 32;           // SDRAM Data Width
-    localparam    CFG_SDR_WIDTH   = 2'b00;
-`elsif SDR_16BIT
-    localparam    SDR_DW          = 16;           // SDRAM Data Width
-    localparam    CFG_SDR_WIDTH   = 2'b01;
-`else  // 8 BIT SDRAM
-    localparam    SDR_DW          = 08;           // SDRAM Data Width
-    localparam    CFG_SDR_WIDTH   = 2'b10;
-`endif
-    localparam    SDR_BW          = (SDR_DW / 8); // SDRAM Byte Width
-    localparam    CFG_COLBITS     = 2'b00;        // 8 Bit Column Address
-
-    // Some test timing parameters
-    localparam TWR       = 1; // Write Recovery
-    localparam TRAS_D    = 4; // Active to Precharge Delay
-    localparam TCAS      = 3; // CAS Latency
-    localparam TRCD_D    = 2; // Active to Read or Write Delay
-    localparam TRP_D     = 2; // Precharge Command Period
-    localparam TRCAR_D   = 7; // Active-Active/Auto-Refresh Command Period
-    localparam BURST_LEN = dw/SDR_DW; // READ/WRITE Burst Length
-    localparam P_SYS     = 10;     //    200MHz
-    localparam P_SDR     = 20;     //    100MHz
-*/
     // WIRE DECLARATIONS
     logic sys_clk,sdram_clk,sdram_clk_d,RESETN;
     logic sdr_init_done;
@@ -81,7 +95,7 @@ module top_hdl();	//pragma attribute top_hdl partition_module_xrtl
         // wishbone interface
         wbi.master,
         // sdram interface
-        sdram_bus,
+        sdram_bus.ctrlcore,
         // configuration bus
         cfg.slave
     );

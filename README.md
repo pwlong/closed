@@ -12,9 +12,6 @@ https://github.com/pwlong/closed/blob/master/sdr_ctrl/doc/mt48lc2m32b2_sdram.pdf
 Presentation:  
 https://docs.google.com/presentation/d/1w4VRFHtmHH7RPm3OQ6P33JIthNZgZPxFHlhyyC10X8c/edit?usp=sharing
 
-Design Document:  
-https://docs.google.com/document/d/1kQPyA50MTZr-IjQk3N7f6SurfYVoXsPv1HA-S03wQUA/edit?usp=sharing
-
 Old Thoughts/Paper Trail:  
 https://github.com/pwlong/closed/blob/master/diagrams/high_level_block_diagram.pdf  
 https://docs.google.com/drawings/d/1wWBiNJjrQRscqf45trVFaOrikl2mXfeygOGsvJyRDrw/edit?usp=sharing  
