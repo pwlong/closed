@@ -1,5 +1,6 @@
 +define+S50 \
 +define+VERBOSE \
++incdir+../tb \
 +incdir+../../rtl/core \
 +incdir+../../rtl/interfaces \
 ../../rtl/interfaces/sdr_if.sv \

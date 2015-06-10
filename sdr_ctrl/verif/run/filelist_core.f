@@ -1,4 +1,5 @@
 +define+S50 \
++incdir+../tb \
 +incdir+../../rtl/core \
 ../../rtl/interfaces/sdr_if.sv \
 ../../rtl/interfaces/wbinterface.sv \

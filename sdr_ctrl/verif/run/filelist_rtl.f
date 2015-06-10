@@ -1,4 +1,5 @@
 +incdir+../../rtl/core \
++incdir+../tb \
 ../../rtl/interfaces/sdr_if.sv \
 ../../rtl/interfaces/wbinterface.sv \
 ../../rtl/interfaces/cfg_if.sv \
